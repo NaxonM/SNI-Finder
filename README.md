@@ -45,6 +45,14 @@ sudo ./start.sh
 	- `results/<timestamp>/working_pairs.txt`
 	- `logs/scanner.log`
 
+## Screenshots
+
+![SNI-Finder main menu](resources/SNI-Finder-01.png)
+
+![SNI-Finder scan view](resources/SNI-Finder-02.png)
+
+![SNI-Finder results view](resources/SNI-Finder-03.png)
+
 ## Features
 
 - Resolves SNI list to IPv4 pairs.

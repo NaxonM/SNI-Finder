@@ -45,6 +45,14 @@ sudo ./start.sh
   - `results/<timestamp>/working_pairs.txt`
   - `logs/scanner.log`
 
+## اسکرين شات ها
+
+![منوي اصلي SNI-Finder](resources/SNI-Finder-01.png)
+
+![نماي اجراي اسکن](resources/SNI-Finder-02.png)
+
+![نماي نتايج](resources/SNI-Finder-03.png)
+
 ## قابليت ها
 
 - خواندن ليست SNI از `config/sni-list.txt`
