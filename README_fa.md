@@ -6,6 +6,8 @@ SNI-Finder جفت هاي SNI+IP را با اين زنجيره اسکن مي کن
 2. اجراي Xray با outbound از نوع VLESS که به SNISPF محلي وصل است.
 3. ارسال درخواست HTTP از طريق SOCKS در Xray براي تشخيص سالم بودن جفت.
 
+English guide: [README.md](README.md)
+
 ## قابليت ها
 
 - خواندن ليست SNI از `config/sni-list.txt`

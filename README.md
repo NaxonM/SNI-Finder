@@ -6,7 +6,7 @@ SNI-Finder scans SNI+IP candidates by chaining:
 2. Xray core with a VLESS outbound pointed to local SNISPF.
 3. HTTP probe over Xray SOCKS to mark each pair as working or failed.
 
-Persian guide: `README_fa.md`
+Persian guide: [README_fa.md](README_fa.md)
 
 ## Features
 
