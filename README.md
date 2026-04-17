@@ -8,6 +8,43 @@ SNI-Finder scans SNI+IP candidates by chaining:
 
 Persian guide: [README_fa.md](README_fa.md)
 
+## Quick Start From GitHub Releases (Recommended)
+
+Use this flow if you want to scan SNI candidates with released bundles.
+
+1. Download the latest release asset for your OS from GitHub Releases:
+	- Windows: `sni-finder_windows_amd64_bundle.zip`
+	- Linux: `sni-finder_linux_amd64_bundle.tar.gz`
+2. Extract the archive and open a terminal in the extracted folder.
+3. Edit `config/sni-list.txt` and put one SNI per line.
+4. Launch the scanner:
+
+Windows (run as Administrator):
+
+```powershell
+cd sni-finder_windows_amd64_bundle
+.\start.bat
+```
+
+Linux (run with required privileges):
+
+```bash
+cd sni-finder_linux_amd64_bundle
+chmod +x ./start.sh
+sudo ./start.sh
+```
+
+5. On first run:
+	- The launcher checks required Python packages and tries to install missing ones.
+	- If `vless_source` is empty, interactive setup starts automatically.
+6. Start scanning:
+	- Use menu option `Run Scan`, or
+	- Run directly: `python scanner.py run`
+7. Read results in:
+	- `results/latest.json`
+	- `results/<timestamp>/working_pairs.txt`
+	- `logs/scanner.log`
+
 ## Features
 
 - Resolves SNI list to IPv4 pairs.
@@ -52,31 +89,6 @@ Linux shell:
 cd SNI-Finder
 python3 -m pip install -r requirements.txt
 ```
-
-## Quick Launch (Recommended)
-
-Use launch scripts as the fastest way to start the app.
-
-Windows (must be elevated):
-
-```powershell
-cd SNI-Finder
-.\start.bat
-```
-
-Linux (must run with required privileges for strict `wrong_seq`):
-
-```bash
-cd SNI-Finder
-chmod +x ./start.sh
-sudo ./start.sh
-```
-
-Privilege note:
-
-- Scanner probing depends on SNISPF strict `wrong_seq` path.
-- On Windows, run terminal as Administrator.
-- On Linux, run as root or provide `CAP_NET_RAW` to SNISPF binary.
 
 ## Configure
 

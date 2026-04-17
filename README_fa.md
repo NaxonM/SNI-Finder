@@ -8,6 +8,43 @@ SNI-Finder جفت هاي SNI+IP را با اين زنجيره اسکن مي کن
 
 English guide: [README.md](README.md)
 
+## شروع سريع با نسخه هاي Release (پيشنهادي)
+
+اگر مي خواهيد با نسخه آماده Release اسکن SNI انجام دهيد، اين مراحل را انجام دهيد:
+
+1. از GitHub Releases فايل مناسب سيستم عامل را دانلود کنيد:
+  - ويندوز: `sni-finder_windows_amd64_bundle.zip`
+  - لينوکس: `sni-finder_linux_amd64_bundle.tar.gz`
+2. فايل را Extract کنيد و ترمينال را داخل پوشه استخراج شده باز کنيد.
+3. فايل `config/sni-list.txt` را ويرايش کنيد و در هر خط يک SNI قرار دهيد.
+4. اسکنر را اجرا کنيد:
+
+ويندوز (حتما با Administrator):
+
+```powershell
+cd sni-finder_windows_amd64_bundle
+.\start.bat
+```
+
+لينوکس (حتما با دسترسي لازم):
+
+```bash
+cd sni-finder_linux_amd64_bundle
+chmod +x ./start.sh
+sudo ./start.sh
+```
+
+5. در اجراي اول:
+  - لانچر وابستگي هاي Python را چک مي کند و در صورت نياز نصب مي کند.
+  - اگر `vless_source` خالي باشد، تنظيم تعاملي خودکار شروع مي شود.
+6. شروع اسکن:
+  - از منو گزينه `Run Scan` را بزنيد، يا
+  - مستقيم اجرا کنيد: `python3 scanner.py run`
+7. خروجي را در اين فايل ها ببينيد:
+  - `results/latest.json`
+  - `results/<timestamp>/working_pairs.txt`
+  - `logs/scanner.log`
+
 ## قابليت ها
 
 - خواندن ليست SNI از `config/sni-list.txt`
@@ -52,31 +89,6 @@ English guide: [README.md](README.md)
 cd SNI-Finder
 python3 -m pip install -r requirements.txt
 ```
-
-## اجراي سريع (پيشنهادي)
-
-سريع ترين روش براي اجرا، استفاده از اسکریپت هاي لانچ است.
-
-ويندوز (حتما با دسترسي Administrator):
-
-```powershell
-cd SNI-Finder
-.\start.bat
-```
-
-لينوکس (حتما با دسترسي لازم براي `wrong_seq`):
-
-```bash
-cd SNI-Finder
-chmod +x ./start.sh
-sudo ./start.sh
-```
-
-نکته دسترسي:
-
-- اسکن واقعي به مسير strict `wrong_seq` در SNISPF وابسته است.
-- در ويندوز ترمينال را با Administrator اجرا کنيد.
-- در لينوکس با root اجرا کنيد يا به باينري SNISPF دسترسي `CAP_NET_RAW` بدهيد.
 
 ## تنظيمات
 
