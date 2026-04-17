@@ -75,11 +75,13 @@ settings = load_settings()
 sys.exit(0 if str(getattr(settings, "vless_source", "")).strip() else 1)
 PY
 then
-  echo "vless_source is not configured in config/scanner_settings.json."
-  echo "Running interactive setup..."
-  if ! "${PYTHON_BIN}" scanner.py configure; then
+  echo
+  echo "First-time setup is required before scanning."
+  echo "Opening guided setup wizard..."
+  echo
+  if ! "${PYTHON_BIN}" scanner.py onboarding; then
     echo
-    echo "Configuration failed or was cancelled."
+    echo "Setup was cancelled or failed."
     echo "Log file: logs/scanner.log"
     read -r -p "Press Enter to close..."
     exit 1

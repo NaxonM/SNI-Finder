@@ -33,12 +33,14 @@ if errorlevel 1 (
 
 call %PYTHON_CMD% -c "from sni_finder.settings import load_settings; import sys; s = load_settings(); sys.exit(0 if str(getattr(s, 'vless_source', '')).strip() else 1)"
 if errorlevel 1 (
-	echo VLESS source is not configured in config\scanner_settings.json.
-	echo Running interactive setup...
-	call %PYTHON_CMD% scanner.py configure
+	echo.
+	echo First-time setup is required before scanning.
+	echo Opening guided setup wizard...
+	echo.
+	call %PYTHON_CMD% scanner.py onboarding
 	if errorlevel 1 (
 		echo.
-		echo Configuration failed or was cancelled.
+		echo Setup was cancelled or failed.
 		set EXITCODE=%ERRORLEVEL%
 		echo Log file: logs\scanner.log
 		pause

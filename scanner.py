@@ -22,7 +22,7 @@ from typing import Any
 
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn, TimeElapsedColumn
-from rich.prompt import FloatPrompt, IntPrompt, Prompt
+from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
 
 from sni_finder.engine import run_scan
@@ -60,39 +60,66 @@ def resolve_with_progress(max_ips_per_sni: int) -> tuple[list[str], list[dict[st
     return snis, resolved_pairs, pairs, dropped_pairs
 
 
-def configure_interactive(settings: ScanSettings) -> ScanSettings:
+def configure_interactive(settings: ScanSettings, *, first_run: bool = False) -> ScanSettings:
     UI_CONSOLE.print(
         Panel(
-            "Edit scanner settings. Press Enter to keep current values.",
-            title="[bold cyan]Configure SNI-Finder[/bold cyan]",
+            (
+                "Let's configure SNI-Finder. Press Enter to keep current values.\n"
+                "You can update these settings later from the menu."
+                if first_run
+                else "Edit scanner settings. Press Enter to keep current values."
+            ),
+            title=("[bold cyan]First-Time Setup[/bold cyan]" if first_run else "[bold cyan]Configure SNI-Finder[/bold cyan]"),
             border_style="cyan",
         )
     )
 
+    if first_run:
+        UI_CONSOLE.print(
+            Panel(
+                "Step 1/3: Connection profile\n"
+                "Step 2/3: Scan speed\n"
+                "Step 3/3: Optional advanced tuning",
+                title="Setup Steps",
+                border_style="cyan",
+            )
+        )
+
     settings.vless_source = Prompt.ask(
-        "vless_source (vless://... or path to xray json/txt)",
+        "VLESS source (vless://... or path to xray json/txt)",
         default=settings.vless_source,
         show_default=True,
     ).strip()
-    settings.workers = IntPrompt.ask("workers", default=settings.workers, show_default=True)
-    settings.max_ips_per_sni = IntPrompt.ask("max_ips_per_sni", default=settings.max_ips_per_sni, show_default=True)
-    settings.retries_per_pair = IntPrompt.ask("retries_per_pair", default=settings.retries_per_pair, show_default=True)
-    settings.probe_url = Prompt.ask("probe_url", default=settings.probe_url, show_default=True).strip()
-    settings.snispf_ready_timeout_seconds = FloatPrompt.ask(
-        "snispf_ready_timeout_seconds", default=float(settings.snispf_ready_timeout_seconds), show_default=True
-    )
-    settings.xray_ready_timeout_seconds = FloatPrompt.ask(
-        "xray_ready_timeout_seconds", default=float(settings.xray_ready_timeout_seconds), show_default=True
-    )
-    settings.probe_connect_timeout_seconds = FloatPrompt.ask(
-        "probe_connect_timeout_seconds", default=float(settings.probe_connect_timeout_seconds), show_default=True
-    )
-    settings.probe_read_timeout_seconds = FloatPrompt.ask(
-        "probe_read_timeout_seconds", default=float(settings.probe_read_timeout_seconds), show_default=True
-    )
+
+    settings.workers = IntPrompt.ask("Parallel workers", default=settings.workers, show_default=True)
+    settings.max_ips_per_sni = IntPrompt.ask("Max IPs per SNI", default=settings.max_ips_per_sni, show_default=True)
+
+    configure_advanced = (not first_run) or Confirm.ask("Configure advanced scan settings now?", default=False)
+    if configure_advanced:
+        settings.retries_per_pair = IntPrompt.ask("Retries per SNI/IP pair", default=settings.retries_per_pair, show_default=True)
+        settings.probe_url = Prompt.ask("Probe URL", default=settings.probe_url, show_default=True).strip()
+        settings.snispf_ready_timeout_seconds = FloatPrompt.ask(
+            "SNISPF ready timeout (seconds)", default=float(settings.snispf_ready_timeout_seconds), show_default=True
+        )
+        settings.xray_ready_timeout_seconds = FloatPrompt.ask(
+            "Xray ready timeout (seconds)", default=float(settings.xray_ready_timeout_seconds), show_default=True
+        )
+        settings.probe_connect_timeout_seconds = FloatPrompt.ask(
+            "Probe connect timeout (seconds)", default=float(settings.probe_connect_timeout_seconds), show_default=True
+        )
+        settings.probe_read_timeout_seconds = FloatPrompt.ask(
+            "Probe read timeout (seconds)", default=float(settings.probe_read_timeout_seconds), show_default=True
+        )
 
     save_settings(settings)
-    UI_CONSOLE.print(Panel("[green]Settings saved.[/green]", border_style="green"))
+    UI_CONSOLE.print(
+        Panel(
+            "[green]Settings saved.[/green]\n"
+            f"Next: choose [bold]Run full scan[/bold] from the menu or run [bold]python scanner.py run[/bold].",
+            title="Ready",
+            border_style="green",
+        )
+    )
     return settings
 
 
@@ -148,7 +175,13 @@ def menu(settings: ScanSettings) -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="SNI+IP scanner using SNISPF + Xray")
-    parser.add_argument("command", nargs="?", default="menu", choices=["menu", "configure", "resolve", "run"], help="Action")
+    parser.add_argument(
+        "command",
+        nargs="?",
+        default="menu",
+        choices=["menu", "configure", "onboarding", "resolve", "run"],
+        help="Action",
+    )
     parser.add_argument("--vless", default="", help="Override vless_source for this run")
     parser.add_argument("--workers", type=int, default=0, help="Override workers for this run")
     parser.add_argument("--no-pause-on-error", action="store_true", help="Do not wait for Enter on fatal setup errors")
@@ -181,7 +214,11 @@ def main() -> int:
     signal.signal(signal.SIGINT, _on_signal)
 
     if args.command == "configure":
-        configure_interactive(settings)
+        configure_interactive(settings, first_run=False)
+        return 0
+
+    if args.command == "onboarding":
+        configure_interactive(settings, first_run=True)
         return 0
 
     if args.command == "resolve":
