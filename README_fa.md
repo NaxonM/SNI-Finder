@@ -47,11 +47,11 @@ sudo ./start.sh
 
 ## اسکرين شات ها
 
-![منوي اصلي SNI-Finder](resources/SNI-Finder-01.png)
+![صفحه‌ی نتایج](resources/SNI-Finder-01.png)
 
-![نماي اجراي اسکن](resources/SNI-Finder-02.png)
+![اجراي اسکن](resources/SNI-Finder-02.png)
 
-![نماي نتايج](resources/SNI-Finder-03.png)
+![منوی اصلی](resources/SNI-Finder-03.png)
 
 ## قابليت ها
 

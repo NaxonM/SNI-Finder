@@ -47,11 +47,11 @@ sudo ./start.sh
 
 ## Screenshots
 
-![SNI-Finder main menu](resources/SNI-Finder-01.png)
+![SNI-Finder results view](resources/SNI-Finder-01.png)
 
 ![SNI-Finder scan view](resources/SNI-Finder-02.png)
 
-![SNI-Finder results view](resources/SNI-Finder-03.png)
+![SNI-Finder main menu](resources/SNI-Finder-03.png)
 
 ## Features
 
