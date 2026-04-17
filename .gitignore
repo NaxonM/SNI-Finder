@@ -14,22 +14,19 @@ venv/
 .idea/
 
 # Runtime outputs
-logs/*
-!logs/.gitkeep
-results/*
-!results/.gitkeep
-data/runtime/*
-!data/runtime/.gitkeep
+logs/
+results/
+data/runtime/
 
 # Release artifacts
 release/
 
 # Downloaded binaries for local runs
-bin/*
-!bin/.gitkeep
+bin/
 
 # OS files
 .DS_Store
 Thumbs.db
-docs/resources/Hunter/
-docs/reosurces/Hunter/
+
+# Removed legacy docs tree from repository
+docs/
