@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.venv/
+venv/
+
+# Tool caches / editors
+.pytest_cache/
+.mypy_cache/
+.vscode/
+.idea/
+
+# Runtime outputs
+logs/*
+!logs/.gitkeep
+results/*
+!results/.gitkeep
+data/runtime/*
+!data/runtime/.gitkeep
+
+# Release artifacts
+release/
+
+# Downloaded binaries for local runs
+bin/*
+!bin/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+docs/resources/Hunter/
+docs/reosurces/Hunter/
