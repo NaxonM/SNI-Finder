@@ -1,17 +1,11 @@
 {
-  // Safe user knobs only.
   "workers": 4,
   "max_ips_per_sni": 1,
   "probe_url": "https://www.google.com/generate_204",
-
-  // Conservative phase timeouts (seconds).
   "snispf_ready_timeout_seconds": 10.0,
   "xray_ready_timeout_seconds": 10.0,
   "probe_connect_timeout_seconds": 8.0,
   "probe_read_timeout_seconds": 15.0,
-
   "retries_per_pair": 1,
-
-  // Required VLESS source.
   "vless_source": ""
 }

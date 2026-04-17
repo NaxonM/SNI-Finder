@@ -64,8 +64,7 @@ def configure_interactive(settings: ScanSettings, *, first_run: bool = False) ->
     UI_CONSOLE.print(
         Panel(
             (
-                "Let's configure SNI-Finder. Press Enter to keep current values.\n"
-                "You can update these settings later from the menu."
+                "Welcome. Press Enter to keep defaults."
                 if first_run
                 else "Edit scanner settings. Press Enter to keep current values."
             ),
@@ -73,17 +72,6 @@ def configure_interactive(settings: ScanSettings, *, first_run: bool = False) ->
             border_style="cyan",
         )
     )
-
-    if first_run:
-        UI_CONSOLE.print(
-            Panel(
-                "Step 1/3: Connection profile\n"
-                "Step 2/3: Scan speed\n"
-                "Step 3/3: Optional advanced tuning",
-                title="Setup Steps",
-                border_style="cyan",
-            )
-        )
 
     settings.vless_source = Prompt.ask(
         "VLESS source (vless://... or path to xray json/txt)",

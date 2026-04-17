@@ -33,10 +33,7 @@ if errorlevel 1 (
 
 call %PYTHON_CMD% -c "from sni_finder.settings import load_settings; import sys; s = load_settings(); sys.exit(0 if str(getattr(s, 'vless_source', '')).strip() else 1)"
 if errorlevel 1 (
-	echo.
-	echo First-time setup is required before scanning.
-	echo Opening guided setup wizard...
-	echo.
+	echo Starting first-time setup wizard...
 	call %PYTHON_CMD% scanner.py onboarding
 	if errorlevel 1 (
 		echo.
@@ -56,6 +53,7 @@ if errorlevel 1 (
 	)
 )
 
+cls
 call %PYTHON_CMD% scanner.py
 set EXITCODE=%ERRORLEVEL%
 echo.

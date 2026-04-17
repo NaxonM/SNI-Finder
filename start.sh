@@ -75,10 +75,7 @@ settings = load_settings()
 sys.exit(0 if str(getattr(settings, "vless_source", "")).strip() else 1)
 PY
 then
-  echo
-  echo "First-time setup is required before scanning."
-  echo "Opening guided setup wizard..."
-  echo
+  echo "Starting first-time setup wizard..."
   if ! "${PYTHON_BIN}" scanner.py onboarding; then
     echo
     echo "Setup was cancelled or failed."
@@ -101,6 +98,10 @@ PY
     read -r -p "Press Enter to close..."
     exit 1
   fi
+fi
+
+if command -v clear >/dev/null 2>&1; then
+  clear
 fi
 
 if ! "${PYTHON_BIN}" scanner.py; then

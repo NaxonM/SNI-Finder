@@ -1,207 +1,215 @@
 # SNI-Finder Scanner
 
-SNI-Finder جفت هاي SNI+IP را با اين زنجيره اسکن مي کند:
+SNI-Finder جفت‌های SNI+IP را با زنجیره‌ای سه‌مرحله‌ای اسکن می‌کند:
 
-1. اجراي SNISPF در حالت سخت گيرانه `wrong_seq` براي هر جفت.
-2. اجراي Xray با outbound از نوع VLESS که به SNISPF محلي وصل است.
-3. ارسال درخواست HTTP از طريق SOCKS در Xray براي تشخيص سالم بودن جفت.
+1. **SNISPF core** — در حالت سخت‌گیرانه `wrong_seq` برای هر جفت اجرا می‌شود.
+2. **Xray core** — با یک outbound از نوع VLESS که به نمونه SNISPF محلی متصل است راه‌اندازی می‌شود.
+3. **HTTP probe** — یک درخواست HTTP از طریق رابط SOCKS در Xray ارسال می‌کند تا سالم بودن هر جفت را تأیید کند.
 
-English guide: [README.md](README.md)
+> راهنمای انگلیسی: [README.md](README.md)
 
-## شروع سريع با نسخه هاي Release (پيشنهادي)
+---
 
-اگر مي خواهيد با نسخه آماده Release اسکن SNI انجام دهيد، اين مراحل را انجام دهيد:
+## شروع سریع (نسخه‌های Release)
 
-1. از GitHub Releases فايل مناسب سيستم عامل را دانلود کنيد:
-  - ويندوز: `sni-finder_windows_amd64_bundle.zip`
-  - لينوکس: `sni-finder_linux_amd64_bundle.tar.gz`
-2. فايل را Extract کنيد و ترمينال را داخل پوشه استخراج شده باز کنيد.
-3. فايل `config/sni-list.txt` را ويرايش کنيد و در هر خط يک SNI قرار دهيد.
-4. اسکنر را اجرا کنيد:
+روش پیشنهادی استفاده از بسته‌های آماده Release است.
 
-ويندوز (حتما با Administrator):
+**۱. دانلود بسته مناسب سیستم‌عامل** از GitHub Releases:
 
+| سیستم‌عامل | فایل |
+|------------|------|
+| ویندوز | `sni-finder_windows_amd64_bundle.zip` |
+| لینوکس | `sni-finder_linux_amd64_bundle.tar.gz` |
+
+**۲. استخراج آرشیو** و باز کردن ترمینال در پوشه استخراج‌شده.
+
+**۳. ویرایش `config/sni-list.txt`** — در هر خط یک SNI قرار دهید.
+
+**۴. اجرای اسکنر:**
+
+*ویندوز (حتماً با Administrator):*
 ```powershell
 cd sni-finder_windows_amd64_bundle
 .\start.bat
 ```
 
-لينوکس (حتما با دسترسي لازم):
-
+*لینوکس (با دسترسی لازم):*
 ```bash
 cd sni-finder_linux_amd64_bundle
 chmod +x ./start.sh
 sudo ./start.sh
 ```
 
-5. در اجراي اول:
-  - لانچر وابستگي هاي Python را چک مي کند و در صورت نياز نصب مي کند.
-  - اگر `vless_source` خالي باشد، تنظيم تعاملي خودکار شروع مي شود.
-6. شروع اسکن:
-  - از منو گزينه `Run Scan` را بزنيد، يا
-  - مستقيم اجرا کنيد: `python3 scanner.py run`
-7. خروجي را در اين فايل ها ببينيد:
-  - `results/latest.json`
-  - `results/<timestamp>/working_pairs.txt`
-  - `logs/scanner.log`
+**۵. راه‌اندازی اولیه:**
+- لانچر وابستگی‌های Python را بررسی کرده و موارد ناقص را نصب می‌کند.
+- اگر `vless_source` پیکربندی نشده باشد، تنظیم تعاملی به صورت خودکار شروع می‌شود.
 
-## اسکرين شات ها
+**۶. شروع اسکن:**
+- از منو گزینه **Run Scan** را انتخاب کنید، یا
+- مستقیم اجرا کنید: `python3 scanner.py run`
 
-![صفحه‌ی نتایج](resources/SNI-Finder-01.png)
+**۷. مشاهده نتایج:**
+- `results/latest.json`
+- `results/<timestamp>/working_pairs.txt`
+- `logs/scanner.log`
 
-![اجراي اسکن](resources/SNI-Finder-02.png)
+---
 
+## اسکرین‌شات‌ها
+
+![صفحه نتایج](resources/SNI-Finder-01.png)
+![اجرای اسکن](resources/SNI-Finder-02.png)
 ![منوی اصلی](resources/SNI-Finder-03.png)
 
-## قابليت ها
+---
 
-- خواندن ليست SNI از `config/sni-list.txt`
-- Resolve کردن SNI ها به IPv4
-- فيلتر کردن جفت ها فقط در ساب نت هاي Cloudflare
-- اسکن موازي با worker هاي مستقل
-- داشبورد زنده Rich و گزارش علت خطاها
-- ذخيره کامل نتايج و لاگ هر اجرا
+## قابلیت‌ها
 
-## پيش نيازها
+- خواندن لیست SNI از `config/sni-list.txt` و Resolve کردن به IPv4.
+- فیلتر کردن جفت‌ها به ساب‌نت‌های Cloudflare پیش از شروع اسکن.
+- اسکن موازی با worker‌های مستقل و پورت‌های ایزوله.
+- نمایش داشبورد زنده Rich به همراه گزارش علت خطاها.
+- ذخیره کامل خروجی‌های هر اجرا: خلاصه، لیست جفت‌های سالم/ناسالم، و لاگ.
 
-- Python 3.10 يا بالاتر
-- يک VLESS معتبر
-- باينري هاي SNISPF و Xray
+---
 
-ويندوز:
+## پیش‌نیازها
 
-- PowerShell را به صورت Administrator اجرا کنيد (براي `wrong_seq` و WinDivert)
-- فايل هاي زير در `bin/` باشند:
+- **Python 3.10** یا بالاتر
+- یک **VLESS** معتبر
+- باینری‌های **SNISPF** و **Xray**
+
+**ویندوز:**
+- PowerShell را به صورت Administrator اجرا کنید (لازمه `wrong_seq` و WinDivert).
+- فایل‌های زیر را در `bin/` قرار دهید:
   - `snispf_windows_amd64.exe`
   - `xray.exe`
   - `WinDivert.dll`
   - `WinDivert64.sys`
 
-لينوکس:
-
-- براي `wrong_seq` دسترسي لازم داشته باشيد (root يا `CAP_NET_RAW`)
-- فايل هاي زير در `bin/` باشند:
-  - `snispf_linux_amd64` (يا arm64)
+**لینوکس:**
+- دسترسی raw packet داشته باشید (root یا `CAP_NET_RAW`).
+- فایل‌های زیر را در `bin/` قرار دهید:
+  - `snispf_linux_amd64` (یا نسخه arm64)
   - `xray`
 
-متغيرهاي اختياري براي مسير ابزارها:
+**متغیرهای اختیاری** برای تعریف مسیر باینری‌ها (مسیر کامل، مسیر نسبی پروژه، یا نام دستور در `PATH`):
 
-- `SNI_FINDER_SNISPF_BIN`
-- `SNI_FINDER_XRAY_BIN`
+| متغیر | کاربرد |
+|-------|--------|
+| `SNI_FINDER_SNISPF_BIN` | تعریف مسیر باینری SNISPF |
+| `SNI_FINDER_XRAY_BIN`   | تعریف مسیر باینری Xray   |
 
-اين متغيرها مي توانند مسير کامل، مسير نسبي پروژه يا نام دستور در PATH باشند.
+---
 
 ## نصب
 
+**ویندوز:**
+```powershell
+cd SNI-Finder
+pip install -r requirements.txt
+```
+
+**لینوکس:**
 ```bash
 cd SNI-Finder
 python3 -m pip install -r requirements.txt
 ```
 
-## تنظيمات
+---
 
-`vless_source` را با يکي از حالت هاي زير تنظيم کنيد:
+## پیکربندی
 
-- لينک کامل `vless://...`
-- مسير فايل txt که داخلش `vless://...` است
-- مسير فايل JSON از Xray که outbound نوع VLESS دارد
+`vless_source` را با یکی از روش‌های زیر تنظیم کنید:
 
-تنظيم تعاملي:
+- لینک کامل `vless://...`
+- مسیر یک فایل txt حاوی `vless://...`
+- مسیر یک فایل JSON از Xray با outbound نوع VLESS
 
+**تنظیم تعاملی:**
 ```bash
 python3 scanner.py configure
 ```
 
-فايل تنظيمات: `config/scanner_settings.json`
+فایل تنظیمات: `config/scanner_settings.json`
+
+---
 
 ## اجرا
 
-اجراي سريع با اسکریپت هاي لانچ:
+| روش | دستور |
+|-----|-------|
+| اسکریپت لانچ (ویندوز) | `start.bat` |
+| اسکریپت لانچ (لینوکس) | `sudo ./start.sh` |
+| حالت منو | `python3 scanner.py` |
+| اسکن مستقیم | `python3 scanner.py run` |
+| فقط Resolve | `python3 scanner.py resolve` |
+| اجرا با VLESS موقت | `python3 scanner.py run --vless "vless://..."` |
 
-- ويندوز: `start.bat`
-- لينوکس: `sudo ./start.sh`
+**توقف نرم:** در حین اسکن `Ctrl+C` بزنید. Worker‌های فعال پروسه‌ها را پاکسازی کرده و پورت‌ها را آزاد می‌کنند.
 
-حالت منو:
+---
 
-```bash
-python3 scanner.py
-```
+## ساخت بسته انتشار
 
-اسکن مستقيم:
+اسکریپت انتشار به صورت خودکار آخرین نسخه پایدار این ابزارها را دریافت می‌کند:
+- **SNISPF** از `NaxonM/snispf-core`
+- **Xray** از `XTLS/Xray-core`
 
-```bash
-python3 scanner.py run
-```
-
-فقط Resolve:
-
-```bash
-python3 scanner.py resolve
-```
-
-اجرا با VLESS موقت:
-
-```bash
-python3 scanner.py run --vless "vless://..."
-```
-
-توقف نرم:
-
-- هنگام اسکن `Ctrl+C` بزنيد
-- worker هاي فعال cleanup مي شوند و بعد برنامه مي بندد
-
-## ساخت بسته انتشار (Windows + Linux)
-
-اسکريپت انتشار به صورت خودکار آخرين نسخه پايدار را مي گيرد:
-
-- SNISPF از `NaxonM/snispf-core`
-- Xray از `XTLS/Xray-core`
-
-ويندوز:
-
+**ویندوز:**
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build_release_bundles.ps1
 ```
 
-لينوکس:
-
+**لینوکس:**
 ```bash
 bash ./scripts/build_release_bundles.sh
 ```
 
-خروجي:
+**فایل‌های خروجی:**
 
-- `release/sni-finder_windows_amd64_bundle.zip`
-- `release/sni-finder_linux_amd64_bundle.tar.gz`
-- `release/checksums.txt`
-- `release/release_manifest.json`
+| فایل | توضیح |
+|------|-------|
+| `release/sni-finder_windows_amd64_bundle.zip` | بسته ویندوز |
+| `release/sni-finder_linux_amd64_bundle.tar.gz` | بسته لینوکس |
+| `release/checksums.txt` | چک‌سام فایل‌ها |
+| `release/release_manifest.json` | مانیفست انتشار |
 
-## انتشار با GitHub Actions (پيشنهادي)
+---
 
-انتشار نهايي را با workflow انجام دهيد و فايل هاي generated را commit نکنيد.
+## انتشار با GitHub Actions (پیشنهادی)
 
-فايل workflow: `.github/workflows/release.yml`
+انتشار نهایی را با workflow انجام دهید و فایل‌های generated را مستقیماً commit نکنید.
 
-- `workflow_dispatch`: ساخت باندل براي تست/بررسي
-- push تگ با الگوي `v*`: ساخت باندل و انتشار خودکار روي GitHub Releases
+**فایل workflow:** `.github/workflows/release.yml`
 
-نمونه انتشار با تگ:
+| تریگر | رفتار |
+|-------|-------|
+| `workflow_dispatch` | ساخت بسته برای تست یا بررسی |
+| Push تگ با الگوی `v*` | ساخت بسته و انتشار خودکار روی GitHub Releases |
 
+**نمونه انتشار با تگ:**
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-## خروجي هاي اجرا
+---
 
-- `results/latest.json`
-- `results/<timestamp>/summary.json`
-- `results/<timestamp>/working_pairs.json`
-- `results/<timestamp>/failed_pairs.json`
-- `results/<timestamp>/working_pairs.txt`
-- `logs/scanner.log`
+## خروجی‌های اجرا
 
-## نکته ها
+| مسیر | توضیح |
+|------|-------|
+| `results/latest.json` | نتایج آخرین اجرا |
+| `results/<timestamp>/summary.json` | خلاصه اجرا |
+| `results/<timestamp>/working_pairs.json` | جفت‌های سالم (JSON) |
+| `results/<timestamp>/failed_pairs.json` | جفت‌های ناسالم (JSON) |
+| `results/<timestamp>/working_pairs.txt` | جفت‌های سالم (متن ساده) |
+| `logs/scanner.log` | لاگ کامل اسکنر |
 
-- فايل `config/cf_subnets.txt` اجباري است.
-- جفت هاي خارج از رنج Cloudflare قبل از اسکن حذف مي شوند.
+---
+
+## نکته‌ها
+
+- فایل `config/cf_subnets.txt` اجباری است و باید پیش از اجرا وجود داشته باشد.
+- جفت‌هایی که خارج از ساب‌نت‌های شناخته‌شده Cloudflare هستند، پیش از شروع اسکن حذف می‌شوند.
