@@ -71,6 +71,31 @@ jobs:
             } > dist/release-notes.md
           fi
 
+      - name: Append runtime component versions to release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f dist/release_manifest.json ]]; then
+            python3 - <<'PY'
+import json
+from pathlib import Path
+
+manifest_path = Path("dist/release_manifest.json")
+notes_path = Path("dist/release-notes.md")
+
+data = json.loads(manifest_path.read_text(encoding="utf-8"))
+sources = data.get("sources", {})
+snispf = sources.get("snispf", {}).get("tag", "unknown")
+xray = sources.get("xray", {}).get("tag", "unknown")
+
+with notes_path.open("a", encoding="utf-8") as f:
+    f.write("\n")
+    f.write("### Runtime Components\n")
+    f.write(f"- SNISPF Core: {snispf}\n")
+    f.write(f"- Xray Core: {xray}\n")
+PY
+          fi
+
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
