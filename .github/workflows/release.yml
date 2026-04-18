@@ -51,6 +51,24 @@ jobs:
           name: sni-finder-release
           path: dist
 
+      - name: Normalize release asset paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/publish
+
+          find dist -type f \( \
+            -name "sni-finder_windows_amd64_bundle.zip" -o \
+            -name "sni-finder_linux_amd64_bundle.tar.gz" -o \
+            -name "checksums.txt" -o \
+            -name "release_manifest.json" \
+          \) -exec cp -f {} dist/publish/ \;
+
+          test -f dist/publish/sni-finder_windows_amd64_bundle.zip
+          test -f dist/publish/sni-finder_linux_amd64_bundle.tar.gz
+          test -f dist/publish/checksums.txt
+          test -f dist/publish/release_manifest.json
+
       - name: Prepare release notes from changelog
         shell: bash
         run: |
@@ -75,17 +93,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f dist/release_manifest.json ]]; then
-            python3 -c "import json,pathlib; d=json.loads(pathlib.Path('dist/release_manifest.json').read_text(encoding='utf-8')); s=d.get('sources',{}); sn=s.get('snispf',{}).get('tag','unknown'); xr=s.get('xray',{}).get('tag','unknown'); n=pathlib.Path('dist/release-notes.md'); n.write_text(n.read_text(encoding='utf-8') + '\n### Runtime Components\n- SNISPF Core: ' + sn + '\n- Xray Core: ' + xr + '\n', encoding='utf-8')"
+          if [[ -f dist/publish/release_manifest.json ]]; then
+            python3 -c "import json,pathlib; d=json.loads(pathlib.Path('dist/publish/release_manifest.json').read_text(encoding='utf-8')); s=d.get('sources',{}); sn=s.get('snispf',{}).get('tag','unknown'); xr=s.get('xray',{}).get('tag','unknown'); n=pathlib.Path('dist/release-notes.md'); n.write_text(n.read_text(encoding='utf-8') + '\n### Runtime Components\n- SNISPF Core: ' + sn + '\n- Xray Core: ' + xr + '\n', encoding='utf-8')"
           fi
 
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/sni-finder_windows_amd64_bundle.zip
-            dist/sni-finder_linux_amd64_bundle.tar.gz
-            dist/checksums.txt
-            dist/release_manifest.json
+            dist/publish/sni-finder_windows_amd64_bundle.zip
+            dist/publish/sni-finder_linux_amd64_bundle.tar.gz
+            dist/publish/checksums.txt
+            dist/publish/release_manifest.json
           body_path: dist/release-notes.md
           generate_release_notes: false
