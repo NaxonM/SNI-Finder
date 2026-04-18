@@ -6,9 +6,10 @@ All notable changes to SNI-Finder are documented in this file.
 
 ### Changed
 - Expanded the default SNI list.
+- Rebuilt release bundles from scratch to refresh bundled runtime components.
 
 ### Runtime Components
-- SNISPF Core: v0.1.2 -> v0.1.2 (no change)
+- SNISPF Core: v0.1.2 -> v0.1.3
 - Xray Core: v26.3.27 -> v26.3.27 (no change)
 
 ## [v0.1.3] - 2026-04-18
