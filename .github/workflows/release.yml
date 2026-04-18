@@ -42,11 +42,34 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Download bundle artifacts
         uses: actions/download-artifact@v4
         with:
           name: sni-finder-release
           path: dist
+
+      - name: Prepare release notes from changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+
+          awk -v tag="$tag" '
+            $0 ~ "^## \\[" tag "\\]" {in_section=1; next}
+            in_section && $0 ~ "^## \\[" {exit}
+            in_section {print}
+          ' CHANGELOG.md > dist/release-notes.md
+
+          if [[ ! -s dist/release-notes.md ]]; then
+            {
+              echo "Release ${tag}"
+              echo
+              echo "No changelog section found for ${tag} in CHANGELOG.md."
+            } > dist/release-notes.md
+          fi
 
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
@@ -56,4 +79,5 @@ jobs:
             dist/sni-finder_linux_amd64_bundle.tar.gz
             dist/checksums.txt
             dist/release_manifest.json
-          generate_release_notes: true
+          body_path: dist/release-notes.md
+          generate_release_notes: false
