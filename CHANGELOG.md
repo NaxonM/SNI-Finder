@@ -2,6 +2,15 @@
 
 All notable changes to SNI-Finder are documented in this file.
 
+## [v0.1.4] - 2026-04-18
+
+### Changed
+- Expanded the default SNI list.
+
+### Runtime Components
+- SNISPF Core: v0.1.2 -> v0.1.2 (no change)
+- Xray Core: v26.3.27 -> v26.3.27 (no change)
+
 ## [v0.1.3] - 2026-04-18
 
 ### Added
@@ -13,8 +22,11 @@ All notable changes to SNI-Finder are documented in this file.
 - Release guidance and quick-start documentation were reorganized for better first-run clarity.
 
 ### Fixed
-- OpenWrt script invocation examples standardized to use ash where required.
 - Inline screenshot visibility and onboarding UX regressions addressed.
+
+### Runtime Components
+- SNISPF Core: v0.1.2
+- Xray Core: v26.3.27
 
 ## [v0.1.2] - 2026-04-17
 
