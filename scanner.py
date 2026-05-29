@@ -173,6 +173,20 @@ def menu(settings: ScanSettings) -> int:
             last_status = f"[green]✓[/green] Resolved {len(pairs)} CF pairs from {len(snis)} SNIs."
             pause_terminal(True, "Press Enter to return to menu...")
         elif choice == "3":
+            if not getattr(settings, "vless_source", "").strip():
+                UI_CONSOLE.print(
+                    Panel(
+                        "[yellow]Welcome to SNI-Finder! VLESS source is not configured yet.[/yellow]\n"
+                        "Let's complete the first-time setup onboarding before starting the scan.",
+                        title="First-Time Onboarding Setup Required",
+                        border_style="yellow",
+                    )
+                )
+                settings = configure_interactive(settings, first_run=True)
+                if not getattr(settings, "vless_source", "").strip():
+                    last_status = "[red]⚠[/red] First-time setup cancelled. VLESS source is required to scan."
+                    continue
+
             shared.SCAN_ACTIVE = True
             try:
                 exit_code = run_scan(settings, pause_on_exit=False)

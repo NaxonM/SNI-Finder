@@ -420,10 +420,23 @@ class ScanController:
             logging.info("Drained %d remaining pairs from queue after stop signal", discarded)
 
     def _progress_loop(self) -> None:
-        with Live(build_dashboard(self._snapshot()), console=UI_CONSOLE, refresh_per_second=4, transient=False) as live:
+        last_snap = None
+        # Use a lower refresh rate (2 FPS instead of 4) to completely eliminate flashing on remote SSH terminals.
+        with Live(build_dashboard(self._snapshot()), console=UI_CONSOLE, refresh_per_second=2, transient=False) as live:
             while True:
-                live.update(build_dashboard(self._snapshot()))
-                time.sleep(0.25)
+                snap = self._snapshot()
+                # Check if meaningful status values changed before calling live.update()
+                if (
+                    last_snap is None
+                    or snap.processed_pairs != last_snap.processed_pairs
+                    or snap.state != last_snap.state
+                    or snap.worker_states != last_snap.worker_states
+                    or snap.last_event != last_snap.last_event
+                ):
+                    live.update(build_dashboard(snap))
+                    last_snap = snap
+
+                time.sleep(0.5)
                 with self.lock:
                     done = self.processed >= len(self.pairs)
                     stopping = self.stop_event.is_set()

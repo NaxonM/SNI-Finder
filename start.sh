@@ -21,6 +21,12 @@ pick_python() {
 setup_venv() {
   local py_bin="$1"
 
+  # Clean up incomplete venv if present (e.g. from previous failed venv attempts)
+  if [[ -d ".venv" && ! -f ".venv/bin/activate" ]]; then
+    echo "Detected incomplete virtual environment. Cleaning it up..."
+    rm -rf ".venv"
+  fi
+
   if [[ ! -d ".venv" ]]; then
     echo "Creating Python virtual environment (.venv)..."
     if ! "${py_bin}" -m venv .venv; then

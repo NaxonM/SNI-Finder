@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import logging
 import socket
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed, Future
@@ -13,8 +14,8 @@ from .shared import CF_SUBNETS_PATH, GLOBAL_STOP, RESULTS_DIR, SNI_LIST_PATH
 
 # Number of parallel DNS resolver threads.
 _DNS_WORKERS = 16
-# Timeout in seconds for a single getaddrinfo call.
-_DNS_TIMEOUT_SECONDS = 5.0
+# Timeout in seconds for a single getaddrinfo call (generous for high-congestion/censored networks).
+_DNS_TIMEOUT_SECONDS = 8.0
 
 
 def load_sni_list(path: Path) -> list[str]:
@@ -103,6 +104,8 @@ def extract_pairs(
         if GLOBAL_STOP.is_set():
             return []
         ips = resolve_ips_for_sni(sni, max_ips_per_sni)
+        if not ips:
+            logging.warning("DNS resolution failed for SNI: %s (yielded 0 IPs, check DNS/censorship/reachability)", sni)
         return [{"sni": sni, "ip": ip} for ip in ips]
 
     with ThreadPoolExecutor(max_workers=min(_DNS_WORKERS, total or 1)) as executor:
