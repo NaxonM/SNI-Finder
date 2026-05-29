@@ -7,6 +7,7 @@ All notable changes to SNI-Finder are documented in this file.
 ### Added
 - Parallel DNS resolution using a thread pool, vastly speeding up the resolution phase.
 - Added timeout support for socket name resolution queries so they don't hang indefinitely.
+- Linux virtual environment support in `start.sh`, automatically creating, activating, and installing dependencies inside a local `.venv` rather than polluting global site-packages.
 
 ### Fixed
 - Fixed graceful stop (Ctrl+C) ignoring stops during name resolution, waiting forever for worker joins, or stuck queue processing.

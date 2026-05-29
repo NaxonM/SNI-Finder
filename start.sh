@@ -18,35 +18,49 @@ pick_python() {
   return 1
 }
 
+setup_venv() {
+  local py_bin="$1"
+
+  if [[ ! -d ".venv" ]]; then
+    echo "Creating Python virtual environment (.venv)..."
+    if ! "${py_bin}" -m venv .venv; then
+      echo "Failed to create virtual environment via '${py_bin} -m venv .venv'."
+      echo "Please make sure 'python3-venv' package is installed (e.g., 'sudo apt install python3-venv')."
+      return 1
+    fi
+  fi
+
+  return 0
+}
+
 install_requirements() {
   local py_bin="$1"
 
   "${py_bin}" -m pip install --disable-pip-version-check -r requirements.txt && return 0
-  "${py_bin}" -m pip install --user --disable-pip-version-check -r requirements.txt && return 0
 
   "${py_bin}" -m ensurepip --upgrade >/dev/null 2>&1 || true
   "${py_bin}" -m pip install --disable-pip-version-check -r requirements.txt && return 0
-  "${py_bin}" -m pip install --user --disable-pip-version-check -r requirements.txt && return 0
-
-  if command -v pip3 >/dev/null 2>&1; then
-    pip3 install --disable-pip-version-check -r requirements.txt && return 0
-    pip3 install --user --disable-pip-version-check -r requirements.txt && return 0
-  fi
-
-  if command -v pip >/dev/null 2>&1; then
-    pip install --disable-pip-version-check -r requirements.txt && return 0
-    pip install --user --disable-pip-version-check -r requirements.txt && return 0
-  fi
-
-  if command -v sudo >/dev/null 2>&1; then
-    sudo "${py_bin}" -m pip install --disable-pip-version-check -r requirements.txt && return 0
-  fi
 
   return 1
 }
 
-if ! PYTHON_BIN="$(pick_python)"; then
+if ! PYTHON_SYSTEM_BIN="$(pick_python)"; then
   echo "Python was not found. Install Python 3.10+ and relaunch."
+  read -r -p "Press Enter to close..."
+  exit 1
+fi
+
+if ! setup_venv "${PYTHON_SYSTEM_BIN}"; then
+  read -r -p "Press Enter to close..."
+  exit 1
+fi
+
+if [[ -f ".venv/bin/activate" ]]; then
+  # shellcheck source=/dev/null
+  source ".venv/bin/activate"
+  PYTHON_BIN=".venv/bin/python"
+else
+  echo "Virtual environment activation script (.venv/bin/activate) was not found."
   read -r -p "Press Enter to close..."
   exit 1
 fi
@@ -57,11 +71,11 @@ import socks
 import rich
 PY
 then
-  echo "Missing required Python packages. Trying to install from requirements.txt..."
+  echo "Missing required Python packages in the virtual environment. Installing from requirements.txt..."
   if ! install_requirements "${PYTHON_BIN}"; then
     echo
     echo "Failed to install required packages automatically."
-    echo "Run manually: ${PYTHON_BIN} -m pip install -r requirements.txt"
+    echo "Run manually inside the virtual environment: source .venv/bin/activate && pip install -r requirements.txt"
     read -r -p "Press Enter to close..."
     exit 1
   fi
