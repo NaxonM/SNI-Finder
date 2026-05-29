@@ -13,10 +13,6 @@ All notable changes to SNI-Finder are documented in this file.
 - Fixed graceful stop (Ctrl+C) ignoring stops during name resolution, waiting forever for worker joins, or stuck queue processing.
 - Completely fixed the menu system UI to avoid screen flashes, out-of-date menus, and unintuitive screen-clearing before the user can read the action output. Added a status panel.
 
-### Runtime Components
-- SNISPF Core: v0.1.3 (no change)
-- Xray Core: v26.3.27 (no change)
-
 ## [v0.1.4] - 2026-04-18
 
 ### Changed
