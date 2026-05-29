@@ -18,27 +18,6 @@ pick_python() {
   return 1
 }
 
-setup_venv() {
-  local py_bin="$1"
-
-  # Clean up incomplete venv if present (e.g. from previous failed venv attempts)
-  if [[ -d ".venv" && ! -f ".venv/bin/activate" ]]; then
-    echo "Detected incomplete virtual environment. Cleaning it up..."
-    rm -rf ".venv"
-  fi
-
-  if [[ ! -d ".venv" ]]; then
-    echo "Creating Python virtual environment (.venv)..."
-    if ! "${py_bin}" -m venv .venv; then
-      echo "Failed to create virtual environment via '${py_bin} -m venv .venv'."
-      echo "Please make sure 'python3-venv' package is installed (e.g., 'sudo apt install python3-venv')."
-      return 1
-    fi
-  fi
-
-  return 0
-}
-
 install_requirements() {
   local py_bin="$1"
 
@@ -58,20 +37,43 @@ if ! PYTHON_SYSTEM_BIN="$(pick_python)"; then
   exit 1
 fi
 
-if setup_venv "${PYTHON_SYSTEM_BIN}"; then
-  if [[ -f ".venv/bin/activate" ]]; then
-    # shellcheck source=/dev/null
-    source ".venv/bin/activate"
-    PYTHON_BIN=".venv/bin/python"
-  else
-    echo "Warning: Virtual environment activation script (.venv/bin/activate) was not found."
-    echo "Falling back to using system Python environment..."
-    PYTHON_BIN="${PYTHON_SYSTEM_BIN}"
-  fi
+# Check if a virtual environment is already active
+if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+  echo "Using already active virtual environment: ${VIRTUAL_ENV}"
+  PYTHON_BIN="python"
 else
-  echo "Warning: Failed to create/use Python virtual environment (.venv)."
-  echo "Falling back to using system Python environment..."
-  PYTHON_BIN="${PYTHON_SYSTEM_BIN}"
+  # Detect existing venv folders (checks both venv and .venv)
+  VENV_DIR=""
+  if [[ -f "venv/bin/activate" ]]; then
+    VENV_DIR="venv"
+  elif [[ -f ".venv/bin/activate" ]]; then
+    VENV_DIR=".venv"
+  fi
+
+  if [[ -n "${VENV_DIR}" ]]; then
+    echo "Found existing virtual environment: ${VENV_DIR}"
+    # shellcheck source=/dev/null
+    source "${VENV_DIR}/bin/activate"
+    PYTHON_BIN="python"
+  else
+    # Clean up incomplete venv folder if present (missing activation script)
+    if [[ -d "venv" ]]; then
+      echo "Detected incomplete venv folder. Cleaning it up..."
+      rm -rf "venv"
+    fi
+
+    echo "Creating Python virtual environment (venv)..."
+    if "${PYTHON_SYSTEM_BIN}" -m venv venv; then
+      # shellcheck source=/dev/null
+      source "venv/bin/activate"
+      PYTHON_BIN="python"
+    else
+      echo "Warning: Failed to create virtual environment via '${PYTHON_SYSTEM_BIN} -m venv venv'."
+      echo "Please make sure 'python3-venv' package is installed (e.g., 'sudo apt install python3-venv')."
+      echo "Falling back to using system Python environment..."
+      PYTHON_BIN="${PYTHON_SYSTEM_BIN}"
+    fi
+  fi
 fi
 
 if ! "${PYTHON_BIN}" - <<'PY'
