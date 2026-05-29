@@ -28,6 +28,7 @@ from rich.table import Table
 from sni_finder.engine import run_scan
 from sni_finder.pairs import filter_pairs_by_subnets, load_cf_subnets, resolve_pairs_from_sni_list, save_resolved_pairs
 from sni_finder.settings import load_settings, save_settings
+from sni_finder import shared
 from sni_finder.shared import CF_SUBNETS_PATH, GLOBAL_STOP, RESULTS_DIR, SCANNER_LOG_PATH, SNI_LIST_PATH, ScanSettings, ensure_dirs, is_elevated_windows, relaunch_with_uac, setup_logging
 from sni_finder.ui import UI_CONSOLE, clear_screen, pause_terminal, render_plan_table
 
@@ -134,7 +135,15 @@ def menu(settings: ScanSettings) -> int:
 
         UI_CONSOLE.print(menu_table)
 
-        choice = Prompt.ask("Select option", choices=["1", "2", "3", "4"], show_choices=False)
+        try:
+            UI_CONSOLE.print("Select option: ", end="")
+            choice = input().strip()
+        except (EOFError, KeyboardInterrupt):
+            return 0
+
+        if choice not in ("1", "2", "3", "4"):
+            last_status = "[red]⚠[/red] Invalid option. Please select 1, 2, 3, or 4."
+            continue
 
         if choice == "1":
             settings = configure_interactive(settings)
@@ -164,7 +173,12 @@ def menu(settings: ScanSettings) -> int:
             last_status = f"[green]✓[/green] Resolved {len(pairs)} CF pairs from {len(snis)} SNIs."
             pause_terminal(True, "Press Enter to return to menu...")
         elif choice == "3":
-            exit_code = run_scan(settings, pause_on_exit=False)
+            shared.SCAN_ACTIVE = True
+            try:
+                exit_code = run_scan(settings, pause_on_exit=False)
+            finally:
+                shared.SCAN_ACTIVE = False
+
             if exit_code == 0:
                 last_status = "[green]✓[/green] Scan completed successfully."
                 pause_terminal(True, "Scan complete. Press Enter to return to menu...")
@@ -209,9 +223,14 @@ def main() -> int:
     shutdown = threading.Event()
 
     def _on_signal(_sig: int, _frame: Any) -> None:
+        import sys
         shutdown.set()
         GLOBAL_STOP.set()
-        print("\nStop requested. Finishing active workers and cleaning up...")
+        if not shared.SCAN_ACTIVE:
+            print("\nExiting...")
+            sys.exit(0)
+        else:
+            print("\nStop requested. Finishing active workers and cleaning up...")
 
     signal.signal(signal.SIGINT, _on_signal)
 

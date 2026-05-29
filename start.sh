@@ -37,9 +37,11 @@ install_requirements() {
   local py_bin="$1"
 
   "${py_bin}" -m pip install --disable-pip-version-check -r requirements.txt && return 0
+  "${py_bin}" -m pip install --user --disable-pip-version-check -r requirements.txt && return 0
 
   "${py_bin}" -m ensurepip --upgrade >/dev/null 2>&1 || true
   "${py_bin}" -m pip install --disable-pip-version-check -r requirements.txt && return 0
+  "${py_bin}" -m pip install --user --disable-pip-version-check -r requirements.txt && return 0
 
   return 1
 }
@@ -50,19 +52,20 @@ if ! PYTHON_SYSTEM_BIN="$(pick_python)"; then
   exit 1
 fi
 
-if ! setup_venv "${PYTHON_SYSTEM_BIN}"; then
-  read -r -p "Press Enter to close..."
-  exit 1
-fi
-
-if [[ -f ".venv/bin/activate" ]]; then
-  # shellcheck source=/dev/null
-  source ".venv/bin/activate"
-  PYTHON_BIN=".venv/bin/python"
+if setup_venv "${PYTHON_SYSTEM_BIN}"; then
+  if [[ -f ".venv/bin/activate" ]]; then
+    # shellcheck source=/dev/null
+    source ".venv/bin/activate"
+    PYTHON_BIN=".venv/bin/python"
+  else
+    echo "Warning: Virtual environment activation script (.venv/bin/activate) was not found."
+    echo "Falling back to using system Python environment..."
+    PYTHON_BIN="${PYTHON_SYSTEM_BIN}"
+  fi
 else
-  echo "Virtual environment activation script (.venv/bin/activate) was not found."
-  read -r -p "Press Enter to close..."
-  exit 1
+  echo "Warning: Failed to create/use Python virtual environment (.venv)."
+  echo "Falling back to using system Python environment..."
+  PYTHON_BIN="${PYTHON_SYSTEM_BIN}"
 fi
 
 if ! "${PYTHON_BIN}" - <<'PY'
