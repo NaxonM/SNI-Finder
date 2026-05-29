@@ -53,6 +53,11 @@ def pause_terminal(enabled: bool, message: str) -> None:
             pass
 
 
+def clear_screen() -> None:
+    """Clear the terminal using Rich console for a clean redraw."""
+    UI_CONSOLE.clear()
+
+
 def phase(title: str, detail: str = "") -> None:
     header = f"[bold {ACCENT}]{title}[/bold {ACCENT}]"
     body = detail if detail else "Working..."

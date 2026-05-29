@@ -406,6 +406,19 @@ class ScanController:
                 reason_counts=dict(self.reason_counts),
             )
 
+    def _drain_queue(self) -> None:
+        """Discard remaining items so workers stop picking up new pairs."""
+        discarded = 0
+        while True:
+            try:
+                self.q.get_nowait()
+                self.q.task_done()
+                discarded += 1
+            except queue.Empty:
+                break
+        if discarded:
+            logging.info("Drained %d remaining pairs from queue after stop signal", discarded)
+
     def _progress_loop(self) -> None:
         with Live(build_dashboard(self._snapshot()), console=UI_CONSOLE, refresh_per_second=4, transient=False) as live:
             while True:
@@ -413,12 +426,20 @@ class ScanController:
                 time.sleep(0.25)
                 with self.lock:
                     done = self.processed >= len(self.pairs)
-                    stopping = self.stop_event.is_set() and self.state == "stopping"
-                if done or stopping:
+                    stopping = self.stop_event.is_set()
+                if stopping:
+                    # Drain queue so workers finish fast.
+                    self._drain_queue()
+                    with self.lock:
+                        self.state = "stopping"
+                    # Give workers a moment to notice and exit.
+                    time.sleep(0.5)
+                    break
+                if done:
                     break
 
             with self.lock:
-                if self.state != "stopping":
+                if self.state not in ("stopping", "error"):
                     self.state = "completed"
             live.update(build_dashboard(self._snapshot()))
 
@@ -432,11 +453,15 @@ class ScanController:
         def worker_loop(worker_id: int) -> None:
             while True:
                 if self.stop_event.is_set():
+                    with self.lock:
+                        self.worker_states[worker_id] = "stopped"
                     return
                 try:
                     pair = self.q.get(timeout=0.2)
                 except queue.Empty:
                     if self.q.empty():
+                        with self.lock:
+                            self.worker_states[worker_id] = "done"
                         return
                     continue
 
@@ -472,7 +497,7 @@ class ScanController:
         for t in threads:
             t.start()
         for t in threads:
-            t.join()
+            t.join(timeout=5)
 
         with self.lock:
             if self.state != "stopping":

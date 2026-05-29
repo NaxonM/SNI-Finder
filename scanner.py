@@ -29,7 +29,7 @@ from sni_finder.engine import run_scan
 from sni_finder.pairs import filter_pairs_by_subnets, load_cf_subnets, resolve_pairs_from_sni_list, save_resolved_pairs
 from sni_finder.settings import load_settings, save_settings
 from sni_finder.shared import CF_SUBNETS_PATH, GLOBAL_STOP, RESULTS_DIR, SCANNER_LOG_PATH, SNI_LIST_PATH, ScanSettings, ensure_dirs, is_elevated_windows, relaunch_with_uac, setup_logging
-from sni_finder.ui import UI_CONSOLE, pause_terminal, render_plan_table
+from sni_finder.ui import UI_CONSOLE, clear_screen, pause_terminal, render_plan_table
 
 
 def resolve_with_progress(max_ips_per_sni: int) -> tuple[list[str], list[dict[str, str]], list[dict[str, str]], int]:
@@ -112,7 +112,12 @@ def configure_interactive(settings: ScanSettings, *, first_run: bool = False) ->
 
 
 def menu(settings: ScanSettings) -> int:
+    last_status: str = ""
+
     while True:
+        # Clear screen FIRST, then show a clean menu.
+        clear_screen()
+
         menu_table = Table(title="SNI-Finder Menu", border_style="cyan", show_header=True, expand=True)
         menu_table.add_column("Option", style="cyan", width=8)
         menu_table.add_column("Action", style="white")
@@ -120,12 +125,21 @@ def menu(settings: ScanSettings) -> int:
         menu_table.add_row("2", "Resolve SNI+IP pairs only")
         menu_table.add_row("3", "Run full scan (Ctrl+C = graceful stop)")
         menu_table.add_row("4", "Exit")
+
+        # Show status from previous action if any.
+        if last_status:
+            UI_CONSOLE.print(
+                Panel(last_status, border_style="green", title="Last Action", padding=(0, 1))
+            )
+
         UI_CONSOLE.print(menu_table)
 
         choice = Prompt.ask("Select option", choices=["1", "2", "3", "4"], show_choices=False)
 
         if choice == "1":
             settings = configure_interactive(settings)
+            last_status = "[green]✓[/green] Settings saved."
+            pause_terminal(True, "Press Enter to return to menu...")
         elif choice == "2":
             snis, resolved_pairs, pairs, dropped_pairs = resolve_with_progress(settings.max_ips_per_sni)
             per_sni_counts: dict[str, int] = {}
@@ -147,16 +161,16 @@ def menu(settings: ScanSettings) -> int:
                     border_style="green",
                 )
             )
+            last_status = f"[green]✓[/green] Resolved {len(pairs)} CF pairs from {len(snis)} SNIs."
+            pause_terminal(True, "Press Enter to return to menu...")
         elif choice == "3":
-            # In menu mode, never terminate the app after a scan.
-            # Show summary, then return to menu on Enter.
             exit_code = run_scan(settings, pause_on_exit=False)
             if exit_code == 0:
+                last_status = "[green]✓[/green] Scan completed successfully."
                 pause_terminal(True, "Scan complete. Press Enter to return to menu...")
             else:
-                pause_terminal(True, "Scan ended with errors. Press Enter to return to menu...")
-            os.system("cls" if os.name == "nt" else "clear")
-            continue
+                last_status = "[yellow]⚠[/yellow] Scan ended with errors or was interrupted."
+                pause_terminal(True, "Scan ended. Press Enter to return to menu...")
         elif choice == "4":
             return 0
 
