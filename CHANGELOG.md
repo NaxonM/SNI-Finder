@@ -18,10 +18,6 @@ All notable changes to SNI-Finder are documented in this file.
 ### Fixed
 - Ctrl+C during scans returns to the menu instead of exiting the app.
 
-### Runtime Components
-- SNISPF Core: v0.1.3 -> v0.1.8
-- Xray Core: v26.3.27 -> v26.3.27 (no change)
-
 ## [v0.1.5] - 2026-05-29
 
 ### Added
