@@ -256,7 +256,8 @@ def _render_status_line(settings: ScanSettings) -> None:
 
 
 def _render_menu(last_status: str, settings: ScanSettings) -> None:
-    """Print the menu in place. No screen clear — keeps scrollback history."""
+    """Print the menu, clearing the terminal view on redraw to keep it clean."""
+    UI_CONSOLE.clear()
     section_rule("SNI-Finder")
     _render_status_line(settings)
     if last_status:
