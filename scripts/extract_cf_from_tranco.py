@@ -54,19 +54,30 @@ def extract_cf_domains(tranco_csv_path: Path, limit: int = 5000, max_workers: in
     return sorted(cf_domains)
 
 def main():
-    tranco_path = ROOT / "tranco_334VL.csv"
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Extract Cloudflare-fronted domains from a Tranco top-sites CSV list."
+    )
+    parser.add_argument(
+        "tranco_csv",
+        type=str,
+        help="Path to the Tranco top-sites CSV file."
+    )
+    parser.add_argument(
+        "limit",
+        type=int,
+        nargs="?",
+        default=5000,
+        help="Number of top domains to read from the CSV (default: 5000)."
+    )
+
+    args = parser.parse_args()
+    tranco_path = Path(args.tranco_csv)
     if not tranco_path.exists():
         print(f"Error: Tranco CSV not found at {tranco_path}")
         sys.exit(1)
         
-    limit = 5000
-    if len(sys.argv) > 1:
-        try:
-            limit = int(sys.argv[1])
-        except ValueError:
-            pass
-
-    cf_domains = extract_cf_domains(tranco_path, limit=limit)
+    cf_domains = extract_cf_domains(tranco_path, limit=args.limit)
     
     print(f"\nSuccessfully identified {len(cf_domains)} Cloudflare-fronted domains!")
     
@@ -74,8 +85,10 @@ def main():
     current_snis = set()
     if SNI_LIST_PATH.exists():
         for line in SNI_LIST_PATH.read_text(encoding="utf-8", errors="ignore").splitlines():
+            if "#" in line:
+                line = line.split("#", 1)[0]
             sni = line.strip().lower()
-            if sni and not sni.startswith("#"):
+            if sni:
                 current_snis.add(sni)
                 
     new_domains = [d for d in cf_domains if d not in current_snis]
@@ -91,6 +104,7 @@ def main():
         print("Done! You can now start the scanner and scan these new high-reliability domains.")
     else:
         print("No new domains to add.")
+
 
 if __name__ == "__main__":
     main()

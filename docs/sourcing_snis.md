@@ -16,29 +16,20 @@ This script reads from a global domain rank CSV (like the Tranco Top 1 Million l
 
 ### How to use it:
 1. **Download the Tranco Top 1M list** from the [Tranco List Project](https://tranco-list.eu/).
-2. Move the downloaded CSV file into your project folder and rename it to `tranco_334VL.csv` (or edit the script to match your file name).
-3. Run the helper script (specifying the number of top domains to check, e.g. `5000`):
+2. Move or copy the downloaded CSV file (e.g., `tranco_XXXXX.csv`).
+3. Run the helper script, passing the path to the Tranco CSV file and optionally the number of top domains to check (e.g., `5000`):
    ```bash
    # On Windows
-   python scripts/extract_cf_from_tranco.py 5000
+   python scripts/extract_cf_from_tranco.py path/to/tranco.csv 5000
    
    # On Linux (make sure your virtual environment is active)
-   python3 scripts/extract_cf_from_tranco.py 5000
+   python3 scripts/extract_cf_from_tranco.py path/to/tranco.csv 5000
    ```
 4. The helper will automatically query DNS in parallel, filter out any duplicates already present, and append all new Cloudflare-fronted domains directly to your `config/sni-list.txt`!
 
 ---
 
-## 👥 Method 2: Community-Maintained GitHub Lists
-
-Censorship circumvention developers maintain active lists of known, clean Cloudflare domains specifically tailored for TLS tunneling:
-* **[v2fly/domain-list-community](https://github.com/v2fly/domain-list-community)**: The most authoritative community-managed database powering global V2Ray/Xray proxy rule-routing.
-  - Explore the [data](https://github.com/v2fly/domain-list-community/tree/master/data) folder. Curated lists like `category-ads-all`, `geolocation-!cn`, or `google` contain thousands of domains fronted by global CDNs.
-* **IRCF Space Active Domains**: Search GitHub for `ircfspace/active-domains` or `MortezaBashirgange/CleanIP-SNI` which host raw, copy-paste friendly text lists of active Cloudflare SNIs.
-
----
-
-## 🌐 Method 3: Reverse IP Lookup Databases
+## 🌐 Method 2: Reverse IP Lookup Databases
 
 If you know a Cloudflare IP address, you can perform a reverse lookup to find all the domains associated with it:
 1. Pick a Cloudflare IP from `config/cf_subnets.txt` (or use a popular one like `104.16.12.250` or `104.19.230.21`).
@@ -49,7 +40,7 @@ If you know a Cloudflare IP address, you can perform a reverse lookup to find al
 
 ---
 
-## 🗺️ Method 4: Nameserver Queries (SecurityTrails / DNSdumpster)
+## 🗺️ Method 3: Nameserver Queries (SecurityTrails / DNSdumpster)
 
 You can target specific large-scale networks hosted on Cloudflare's Nameservers:
 * **[SecurityTrails](https://securitytrails.com/)**: Search for domains hosted on Cloudflare's primary nameservers (like `*.ns.cloudflare.com`) to extract lists of active domains.

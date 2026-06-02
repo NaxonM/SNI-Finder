@@ -25,8 +25,10 @@ def load_sni_list(path: Path) -> list[str]:
     out: list[str] = []
     seen: set[str] = set()
     for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if "#" in line:
+            line = line.split("#", 1)[0]
         sni = line.strip().lower()
-        if not sni or sni.startswith("#"):
+        if not sni:
             continue
         if sni in seen:
             continue
