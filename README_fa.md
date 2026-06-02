@@ -3,7 +3,7 @@
 SNI-Finder جفت‌های SNI+IP را با زنجیره‌ای سه‌مرحله‌ای اسکن می‌کند:
 
 1. **SNISPF core** — در حالت سخت‌گیرانه `wrong_seq` برای هر جفت اجرا می‌شود.
-2. **Xray core** — با یک outbound از نوع VLESS که به نمونه SNISPF محلی متصل است راه‌اندازی می‌شود.
+2. **Xray core** — با یک outbound از نوع VLESS/Trojan که به نمونه SNISPF محلی متصل است راه‌اندازی می‌شود.
 3. **HTTP probe** — یک درخواست HTTP از طریق رابط SOCKS در Xray ارسال می‌کند تا سالم بودن هر جفت را تأیید کند.
 
 > راهنمای انگلیسی: [README.md](README.md)
@@ -45,7 +45,7 @@ sudo ./start.sh
 - اگر `vless_source` پیکربندی نشده باشد، تنظیم تعاملی به صورت خودکار شروع می‌شود.
 
 **۶. شروع اسکن:**
-- از منو گزینه **Run Scan** را انتخاب کنید، یا
+- از منو گزینه **Start scan** را انتخاب کنید، یا
 - مستقیم اجرا کنید: `python3 scanner.py run`
 
 **۷. مشاهده نتایج:**
@@ -68,6 +68,7 @@ sudo ./start.sh
 - خواندن لیست SNI از `config/sni-list.txt` و Resolve کردن به IPv4.
 - فیلتر کردن جفت‌ها به ساب‌نت‌های Cloudflare پیش از شروع اسکن.
 - اسکن موازی با worker‌های مستقل و پورت‌های ایزوله.
+- پشتیبانی از VLESS/Trojan با ترنسپورت‌های ws/grpc/httpupgrade/xhttp.
 - نمایش داشبورد زنده Rich به همراه گزارش علت خطاها.
 - ذخیره کامل خروجی‌های هر اجرا: خلاصه، لیست جفت‌های سالم/ناسالم، و لاگ.
 
@@ -76,7 +77,7 @@ sudo ./start.sh
 ## پیش‌نیازها
 
 - **Python 3.10** یا بالاتر
-- یک **VLESS** معتبر
+- یک **VLESS/Trojan** معتبر
 - باینری‌های **SNISPF** و **Xray**
 
 **ویندوز:**
@@ -123,8 +124,9 @@ python3 -m pip install -r requirements.txt
 `vless_source` را با یکی از روش‌های زیر تنظیم کنید:
 
 - لینک کامل `vless://...`
+- لینک کامل `trojan://...`
 - مسیر یک فایل txt حاوی `vless://...`
-- مسیر یک فایل JSON از Xray با outbound نوع VLESS
+- مسیر یک فایل JSON از Xray با outbound نوع VLESS یا Trojan
 
 **تنظیم تعاملی:**
 ```bash
@@ -132,6 +134,9 @@ python3 scanner.py configure
 ```
 
 فایل تنظیمات: `config/scanner_settings.json`
+
+**تنظیمات پیشرفته:**
+- `tls_insecure_compat` (پیش‌فرض `false`) — در صورت فعال بودن، TLS برای مقصدهایی با گواهی نامعتبر حذف می‌شود.
 
 ---
 
@@ -146,7 +151,7 @@ python3 scanner.py configure
 | فقط Resolve | `python3 scanner.py resolve` |
 | اجرا با VLESS موقت | `python3 scanner.py run --vless "vless://..."` |
 
-**توقف نرم:** در حین اسکن `Ctrl+C` بزنید. Worker‌های فعال پروسه‌ها را پاکسازی کرده و پورت‌ها را آزاد می‌کنند.
+**توقف نرم:** در حین اسکن `Ctrl+C` بزنید. Worker‌های فعال پروسه‌ها را پاکسازی کرده و به منو برمی‌گردند.
 
 ---
 

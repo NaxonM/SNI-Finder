@@ -6,23 +6,28 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from .shared import VlessProfile
 
+SUPPORTED_SCHEMES = ("vless", "trojan")
 
-def parse_vless_uri(uri: str) -> VlessProfile:
+
+def parse_proxy_uri(uri: str) -> VlessProfile:
     parsed = urlparse(uri.strip())
-    if parsed.scheme.lower() != "vless":
-        raise ValueError("Unsupported URI scheme (expected vless://)")
+    scheme = parsed.scheme.lower()
+    if scheme not in SUPPORTED_SCHEMES:
+        raise ValueError(f"Unsupported URI scheme (expected one of {SUPPORTED_SCHEMES})")
 
     qs = parse_qs(parsed.query)
 
     def get_q(name: str, default: str = "") -> str:
         return unquote(qs.get(name, [default])[0])
 
-    uuid = parsed.username or ""
-    if not uuid:
-        raise ValueError("VLESS URI has no UUID")
+    cred = unquote(parsed.username or "")
+    if not cred:
+        raise ValueError(f"{scheme.upper()} URI is missing credentials (UUID/password)")
 
     return VlessProfile(
-        uuid=uuid,
+        uuid=cred if scheme == "vless" else "",
+        password=cred if scheme == "trojan" else "",
+        protocol=scheme,
         port=int(parsed.port or 443),
         path=get_q("path", ""),
         host=get_q("host", ""),
@@ -35,6 +40,11 @@ def parse_vless_uri(uri: str) -> VlessProfile:
     )
 
 
+# Kept for backwards compatibility; delegates to the unified parser.
+def parse_vless_uri(uri: str) -> VlessProfile:
+    return parse_proxy_uri(uri)
+
+
 def parse_vless_from_xray_json(path_or_json: str) -> VlessProfile:
     if Path(path_or_json).exists():
         data = json.loads(Path(path_or_json).read_text(encoding="utf-8"))
@@ -42,36 +52,57 @@ def parse_vless_from_xray_json(path_or_json: str) -> VlessProfile:
         data = json.loads(path_or_json)
 
     outbounds = data.get("outbounds", [])
-    vless_ob = None
+    proxy_ob = None
     for ob in outbounds:
-        if str(ob.get("protocol", "")).lower() == "vless":
-            vless_ob = ob
+        proto = str(ob.get("protocol", "")).lower()
+        if proto in SUPPORTED_SCHEMES:
+            proxy_ob = ob
             break
-    if not vless_ob:
-        raise ValueError("No VLESS outbound found in xray JSON")
+    if not proxy_ob:
+        raise ValueError(f"No {'/'.join(SUPPORTED_SCHEMES)} outbound found in xray JSON")
 
-    vnext = vless_ob.get("settings", {}).get("vnext", [{}])[0]
-    user = vnext.get("users", [{}])[0]
-    stream = vless_ob.get("streamSettings", {})
+    protocol = str(proxy_ob.get("protocol", "vless")).lower()
+    settings = proxy_ob.get("settings", {})
+    stream = proxy_ob.get("streamSettings", {})
     tls = stream.get("tlsSettings", {})
-    ws = stream.get("wsSettings", {})
-    headers_host = ws.get("headers", {}).get("Host", "")
+
+    if protocol == "vless":
+        vnext = settings.get("vnext", [{}])[0]
+        user = vnext.get("users", [{}])[0]
+        address_port = vnext
+        uuid = str(user.get("id", ""))
+        password = ""
+        flow = str(user.get("flow", ""))
+    else:
+        server = settings.get("servers", [{}])[0]
+        address_port = server
+        uuid = ""
+        password = str(server.get("password", ""))
+        flow = ""
+
+    network = str(stream.get("network", "ws"))
+    transport_settings = stream.get(f"{network}Settings", {}) or {}
+    path = str(transport_settings.get("path", "") or transport_settings.get("serviceName", ""))
+    headers_host = transport_settings.get("headers", {}).get("Host", "") if isinstance(transport_settings.get("headers"), dict) else ""
     if isinstance(headers_host, list):
         headers_host = headers_host[0] if headers_host else ""
+    host = str(transport_settings.get("host", "") or headers_host or tls.get("serverName", ""))
 
     alpn_val = tls.get("alpn", "")
     if isinstance(alpn_val, list):
         alpn_val = ",".join(str(x) for x in alpn_val)
 
     return VlessProfile(
-        uuid=str(user.get("id", "")),
-        port=int(vnext.get("port", 443)),
-        path=str(ws.get("path", "")),
-        host=str(ws.get("host", "") or headers_host or tls.get("serverName", "")),
+        uuid=uuid,
+        password=password,
+        protocol=protocol,
+        port=int(address_port.get("port", 443)),
+        path=path,
+        host=host,
         sni=str(tls.get("serverName", "")),
         security=str(stream.get("security", "tls")),
-        network=str(stream.get("network", "ws")),
-        flow=str(user.get("flow", "")),
+        network=network,
+        flow=flow,
         fp=str(tls.get("fingerprint", "chrome")),
         alpn=str(alpn_val),
     )
@@ -82,17 +113,19 @@ def load_vless_profile(source: str) -> VlessProfile:
     if not source:
         raise ValueError("vless_source is empty")
 
-    if source.startswith("vless://"):
-        return parse_vless_uri(source)
+    for scheme in SUPPORTED_SCHEMES:
+        if source.startswith(f"{scheme}://"):
+            return parse_proxy_uri(source)
 
     p = Path(source)
     if p.exists():
         txt = p.read_text(encoding="utf-8", errors="ignore").strip()
-        if txt.startswith("vless://"):
-            return parse_vless_uri(txt)
+        for scheme in SUPPORTED_SCHEMES:
+            if txt.startswith(f"{scheme}://"):
+                return parse_proxy_uri(txt)
         return parse_vless_from_xray_json(str(p))
 
     if source.startswith("{"):
         return parse_vless_from_xray_json(source)
 
-    raise ValueError("Unsupported vless_source. Use vless:// URI or xray JSON path")
+    raise ValueError("Unsupported source. Use vless://, trojan://, or an xray JSON path")

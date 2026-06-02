@@ -3,7 +3,7 @@
 SNI-Finder scans SNI+IP candidate pairs by chaining three stages:
 
 1. **SNISPF core** — runs in strict `wrong_seq` mode for each candidate pair.
-2. **Xray core** — launches with a VLESS outbound pointed at the local SNISPF instance.
+2. **Xray core** — launches with a VLESS/Trojan outbound pointed at the local SNISPF instance.
 3. **HTTP probe** — sends a request over Xray's SOCKS interface to mark each pair as working or failed.
 
 > Persian guide: [README_fa.md](README_fa.md)
@@ -45,7 +45,7 @@ sudo ./start.sh
 - If `vless_source` is not configured, an interactive setup wizard starts automatically.
 
 **6. Start scanning:**
-- From the menu, select **Run Scan**, or
+- From the menu, select **Start scan**, or
 - Run directly: `python scanner.py run`
 
 **7. Review results:**
@@ -68,6 +68,7 @@ sudo ./start.sh
 - Resolves the SNI list to IPv4 pairs.
 - Filters pairs to Cloudflare subnets before scanning begins.
 - Runs parallel workers with isolated SNISPF/Xray port assignments.
+- Supports VLESS/Trojan with ws/grpc/httpupgrade/xhttp transports.
 - Displays a live Rich dashboard with failure-reason breakdowns.
 - Saves full run artifacts: summary, working/failed lists, and logs.
 
@@ -76,7 +77,7 @@ sudo ./start.sh
 ## Prerequisites
 
 - **Python 3.10+**
-- A valid **VLESS source**
+- A valid **VLESS/Trojan source**
 - **SNISPF** and **Xray** binaries
 
 **Windows:**
@@ -123,8 +124,9 @@ python3 -m pip install -r requirements.txt
 Set `vless_source` using one of the following formats:
 
 - A full `vless://...` URI
+- A full `trojan://...` URI
 - Path to a text file containing a `vless://...` URI
-- Path to an Xray JSON config file with a VLESS outbound
+- Path to an Xray JSON config file with a VLESS or Trojan outbound
 
 **Interactive configuration:**
 ```powershell
@@ -132,6 +134,9 @@ python scanner.py configure
 ```
 
 Settings are stored in: `config/scanner_settings.json`
+
+**Advanced settings:**
+- `tls_insecure_compat` (default `false`) — when enabled, skips TLS for endpoints with broken or mismatched certs.
 
 ---
 
@@ -146,7 +151,7 @@ Settings are stored in: `config/scanner_settings.json`
 | Resolve-only | `python scanner.py resolve` |
 | Override VLESS for one run | `python scanner.py run --vless "vless://..."` |
 
-**Graceful stop:** Press `Ctrl+C` during a scan. Active workers will clean up their processes and release ports before exiting.
+**Graceful stop:** Press `Ctrl+C` during a scan. Active workers will clean up their processes and return you to the menu.
 
 ---
 

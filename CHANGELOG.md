@@ -2,6 +2,26 @@
 
 All notable changes to SNI-Finder are documented in this file.
 
+## [v0.1.6] - 2026-06-02
+
+### Added
+- Trojan proxy URI support alongside VLESS, including xhttp/httpupgrade transports.
+- Live dashboard rewrite with fixed layout regions and streaming working-pair panel.
+- First-run onboarding flow, menu refresh, and last-results view.
+- Optional `tls_insecure_compat` setting for broken-cert endpoints.
+- Enhanced failure diagnostics with per-worker SNISPF/Xray log tails.
+
+### Changed
+- Xray config no longer uses the removed `allowInsecure` field.
+- Release bundles rebuilt with updated runtime components.
+
+### Fixed
+- Ctrl+C during scans returns to the menu instead of exiting the app.
+
+### Runtime Components
+- SNISPF Core: v0.1.3 -> v0.1.8
+- Xray Core: v26.3.27 -> v26.3.27 (no change)
+
 ## [v0.1.5] - 2026-05-29
 
 ### Added
@@ -43,3 +63,4 @@ All notable changes to SNI-Finder are documented in this file.
 ## [v0.1.2] - 2026-04-17
 
 See Git history and GitHub release notes for details.
+

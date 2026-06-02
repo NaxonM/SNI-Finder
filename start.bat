@@ -1,6 +1,29 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 cd /d "%~dp0"
+
+REM ---------------------------------------------------------------------------
+REM Self-elevation: SNISPF wrong_seq probing needs Administrator (raw packets).
+REM We try once; if UAC was denied we fall through and let the Python layer
+REM report the precise error to the user. The --elevated marker prevents
+REM infinite re-launch loops when elevation fails.
+REM ---------------------------------------------------------------------------
+net session >nul 2>&1
+if errorlevel 1 (
+    if /I "%~1"=="--elevated" goto :after_elevation
+    echo Requesting Administrator privileges for SNISPF raw packet probing...
+    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '--elevated' -Verb RunAs" >nul 2>&1
+    if errorlevel 1 (
+        echo UAC elevation was denied or failed. Continuing without admin -- the scanner will warn you.
+        timeout /t 2 >nul
+    ) else (
+        exit /b 0
+    )
+)
+
+:after_elevation
+REM Strip the --elevated marker so it doesn't leak into Python argv.
+if /I "%~1"=="--elevated" shift
 
 set "PYTHON_CMD="
 where py >nul 2>&1

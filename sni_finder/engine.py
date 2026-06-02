@@ -43,11 +43,16 @@ from .shared import (
 from .ui import (
     UI_CONSOLE,
     ScanSnapshot,
-    build_dashboard,
+    WorkingEntry,
+    build_layout,
+    error,
     pause_terminal,
     phase,
     render_plan_table,
     render_summary_tables,
+    section_rule,
+    update_layout,
+    warn,
 )
 
 
@@ -151,33 +156,77 @@ def build_xray_config(
     socks_port: int,
     override_sni: bool,
     override_host: bool,
+    tls_insecure_compat: bool,
 ) -> dict[str, Any]:
-    stream: dict[str, Any] = {
-        "network": profile.network,
-        "security": profile.security,
-        "tlsSettings": {
-            "serverName": pair["sni"] if override_sni else profile.sni,
-            "allowInsecure": True,
-            "fingerprint": profile.fp or "chrome",
-        },
+    stream_security = profile.security
+    tls_settings: dict[str, Any] | None = {
+        "serverName": pair["sni"] if override_sni else profile.sni,
+        "fingerprint": profile.fp or "chrome",
     }
     if profile.alpn:
-        stream["tlsSettings"]["alpn"] = [x.strip() for x in profile.alpn.split(",") if x.strip()]
+        tls_settings["alpn"] = [x.strip() for x in profile.alpn.split(",") if x.strip()]
 
+    if tls_insecure_compat and stream_security == "tls":
+        # Opt-in compatibility mode: skip TLS entirely for endpoints with broken certs.
+        stream_security = "none"
+        tls_settings = None
+
+    stream: dict[str, Any] = {
+        "network": profile.network,
+        "security": stream_security,
+    }
+    if tls_settings:
+        stream["tlsSettings"] = tls_settings
+
+    host_value = pair["sni"] if override_host else profile.host
     if profile.network == "ws":
         stream["wsSettings"] = {
             "path": profile.path,
-            "headers": {"Host": pair["sni"] if override_host else profile.host},
+            "headers": {"Host": host_value},
         }
     elif profile.network == "grpc":
         stream["grpcSettings"] = {
             "serviceName": profile.path.lstrip("/"),
             "multiMode": False,
         }
+    elif profile.network == "httpupgrade":
+        stream["httpupgradeSettings"] = {
+            "path": profile.path,
+            "host": host_value,
+        }
+    elif profile.network in ("xhttp", "splithttp"):
+        # xray uses "xhttp" in newer versions; legacy configs may say "splithttp".
+        stream["network"] = "xhttp"
+        stream["xhttpSettings"] = {
+            "path": profile.path,
+            "host": host_value,
+            "mode": "auto",
+        }
 
-    user: dict[str, Any] = {"id": profile.uuid, "encryption": "none"}
-    if profile.flow:
-        user["flow"] = profile.flow
+    protocol = (profile.protocol or "vless").lower()
+    if protocol == "trojan":
+        outbound_settings = {
+            "servers": [
+                {
+                    "address": snispf_host,
+                    "port": snispf_port,
+                    "password": profile.password,
+                }
+            ]
+        }
+    else:
+        user: dict[str, Any] = {"id": profile.uuid, "encryption": "none"}
+        if profile.flow:
+            user["flow"] = profile.flow
+        outbound_settings = {
+            "vnext": [
+                {
+                    "address": snispf_host,
+                    "port": snispf_port,
+                    "users": [user],
+                }
+            ]
+        }
 
     return {
         "log": {"loglevel": "warning"},
@@ -193,16 +242,8 @@ def build_xray_config(
         "outbounds": [
             {
                 "tag": "proxy",
-                "protocol": "vless",
-                "settings": {
-                    "vnext": [
-                        {
-                            "address": snispf_host,
-                            "port": snispf_port,
-                            "users": [user],
-                        }
-                    ]
-                },
+                "protocol": protocol,
+                "settings": outbound_settings,
                 "streamSettings": stream,
             }
         ],
@@ -274,6 +315,7 @@ def run_pair(
         socks_port,
         False,
         False,
+        settings.tls_insecure_compat,
     )
     snispf_cfg_path.write_text(json.dumps(snispf_cfg, indent=2), encoding="utf-8")
     xray_cfg_path.write_text(json.dumps(xray_cfg, indent=2), encoding="utf-8")
@@ -388,6 +430,9 @@ class ScanController:
         self.successful_snis: set[str] = set()
         self.total_snis = len({pair["sni"] for pair in self.pairs})
         self.state = "running"
+        # Bounded deque of recent successful pairs for the live streaming panel.
+        from collections import deque
+        self.working_recent: deque[WorkingEntry] = deque(maxlen=32)
 
     def _snapshot(self) -> ScanSnapshot:
         with self.lock:
@@ -404,6 +449,7 @@ class ScanController:
                 last_event=self.last_event,
                 worker_states=dict(self.worker_states),
                 reason_counts=dict(self.reason_counts),
+                working_recent=list(self.working_recent),
             )
 
     def _drain_queue(self) -> None:
@@ -420,33 +466,55 @@ class ScanController:
             logging.info("Drained %d remaining pairs from queue after stop signal", discarded)
 
     def _progress_loop(self) -> None:
-        last_snap = None
-        # Use a lower refresh rate (2 FPS instead of 4) to completely eliminate flashing on remote SSH terminals.
-        with Live(build_dashboard(self._snapshot()), console=UI_CONSOLE, refresh_per_second=2, transient=False) as live:
+        """Render the live dashboard with manual refresh — no auto_refresh
+        thread, no flicker. We rebuild only changed Layout regions per tick
+        and call live.refresh() ourselves on meaningful change."""
+        layout = build_layout()
+        snap = self._snapshot()
+        update_layout(layout, snap, width=UI_CONSOLE.size.width)
+        last_snap = snap
+
+        with Live(
+            layout,
+            console=UI_CONSOLE,
+            auto_refresh=False,
+            transient=False,
+            redirect_stdout=True,
+            redirect_stderr=True,
+            screen=False,
+        ) as live:
+            live.refresh()
             while True:
                 snap = self._snapshot()
-                # Check if meaningful status values changed before calling live.update()
-                if (
-                    last_snap is None
-                    or snap.processed_pairs != last_snap.processed_pairs
+                changed = (
+                    snap.processed_pairs != last_snap.processed_pairs
+                    or snap.ok_pairs != last_snap.ok_pairs
+                    or snap.failed_pairs != last_snap.failed_pairs
                     or snap.state != last_snap.state
                     or snap.worker_states != last_snap.worker_states
                     or snap.last_event != last_snap.last_event
-                ):
-                    live.update(build_dashboard(snap))
+                    or snap.reason_counts != last_snap.reason_counts
+                    or len(snap.working_recent) != len(last_snap.working_recent)
+                )
+                # Always update elapsed at >= 1 Hz to keep the timer alive, but
+                # only re-render full layout when something user-visible changed.
+                elapsed_tick = int(snap.elapsed_seconds) != int(last_snap.elapsed_seconds)
+                if changed or elapsed_tick:
+                    update_layout(layout, snap, width=UI_CONSOLE.size.width)
+                    live.refresh()
                     last_snap = snap
 
-                time.sleep(0.5)
+                time.sleep(0.25)
+
                 with self.lock:
                     done = self.processed >= len(self.pairs)
                     stopping = self.stop_event.is_set()
+
                 if stopping:
-                    # Drain queue so workers finish fast.
                     self._drain_queue()
                     with self.lock:
                         self.state = "stopping"
-                    # Give workers a moment to notice and exit.
-                    time.sleep(0.5)
+                    time.sleep(0.4)
                     break
                 if done:
                     break
@@ -454,7 +522,8 @@ class ScanController:
             with self.lock:
                 if self.state not in ("stopping", "error"):
                     self.state = "completed"
-            live.update(build_dashboard(self._snapshot()))
+            update_layout(layout, self._snapshot(), width=UI_CONSOLE.size.width)
+            live.refresh()
 
     def run(self) -> dict[str, Any]:
         for pair in self.pairs:
@@ -487,6 +556,14 @@ class ScanController:
                     if result.get("ok"):
                         self.working.append(result)
                         self.successful_snis.add(pair["sni"])
+                        self.working_recent.append(
+                            WorkingEntry(
+                                sni=str(pair["sni"]),
+                                ip=str(pair["ip"]),
+                                latency_ms=float(result.get("latency_ms", 0) or 0),
+                                worker=worker_id,
+                            )
+                        )
                         self.last_event = f"OK {pair['sni']} / {pair['ip']} ({result.get('latency_ms')}ms)"
                         logging.info("OK w=%s %s %s %.2fms", worker_id, pair["sni"], pair["ip"], float(result.get("latency_ms", 0)))
                     else:
@@ -495,13 +572,20 @@ class ScanController:
                         self.reason_counts[reason] = self.reason_counts.get(reason, 0) + 1
                         self.last_event = f"FAIL {pair['sni']} / {pair['ip']} ({reason})"
                         logging.warning(
-                            "FAIL w=%s %s %s reason=%s snispf_log=%s",
+                            "FAIL w=%s %s %s reason=%s snispf_log=%s xray_log=%s",
                             worker_id,
                             pair["sni"],
                             pair["ip"],
                             reason,
                             result.get("snispf_log"),
+                            result.get("xray_log"),
                         )
+                        snispf_tail = result.get("snispf_log_tail")
+                        xray_tail = result.get("xray_log_tail")
+                        if snispf_tail:
+                            logging.warning("FAIL w=%s snispf_log_tail:\n%s", worker_id, snispf_tail)
+                        if xray_tail:
+                            logging.warning("FAIL w=%s xray_log_tail:\n%s", worker_id, xray_tail)
                     self.worker_states[worker_id] = "idle"
                     self.processed += 1
                 self.q.task_done()
@@ -594,15 +678,19 @@ def run_scan(settings: ScanSettings, pause_on_exit: bool = True) -> int:
     GLOBAL_STOP.clear()
     phase("Step 1/6", "Validating scanner prerequisites")
     if os.name == "nt" and not is_elevated_windows():
-        print("Scanner requires Administrator privileges on Windows for SNISPF wrong_seq probing.")
+        error(
+            "Administrator privileges required",
+            "SNISPF wrong_seq probing needs raw packet injection, which requires Windows admin.\n"
+            "         Close this window and re-launch start.bat — it will request elevation.",
+        )
         logging.error("run blocked: non-elevated process")
-        print(f"See scanner log: {SCANNER_LOG_PATH}")
+        UI_CONSOLE.print(f"  [dim]Log:[/] {SCANNER_LOG_PATH}")
         pause_terminal(pause_on_exit, "Press Enter to close...")
         return 1
 
     try:
         validate_files(settings)
-        phase("Step 2/6", "Loading VLESS profile")
+        phase("Step 2/6", "Loading proxy profile")
         profile = load_vless_profile(settings.vless_source)
         phase("Step 3/6", "Resolving SNI list to SNI+IP pairs")
         with Progress(
@@ -631,18 +719,23 @@ def run_scan(settings: ScanSettings, pause_on_exit: bool = True) -> int:
         save_resolved_pairs(pairs)
     except Exception as exc:
         logging.exception("scan setup failed")
-        print(f"Scan setup failed: {exc}")
+        error("Scan setup failed", str(exc))
         if isinstance(exc, ValueError) and "vless_source is empty" in str(exc):
-            print("vless_source is empty. Set it with one of these:")
-            print("  1) python scanner.py configure")
-            print("  2) python scanner.py run --vless \"vless://...\"")
-            print("  3) Put URI path into config/scanner_settings.json -> vless_source")
-        print(f"See scanner log: {SCANNER_LOG_PATH}")
+            UI_CONSOLE.print()
+            UI_CONSOLE.print("  Set the proxy source one of these ways:")
+            UI_CONSOLE.print("    1) Run [bold]python scanner.py configure[/]")
+            UI_CONSOLE.print("    2) Run [bold]python scanner.py run --vless \"vless://...\"[/]")
+            UI_CONSOLE.print("    3) Edit [bold]config/scanner_settings.json[/] -> vless_source")
+        UI_CONSOLE.print(f"  [dim]Log:[/] {SCANNER_LOG_PATH}")
         pause_terminal(pause_on_exit, "Press Enter to close...")
         return 1
 
     if not pairs:
-        print("No Cloudflare-matching SNI+IP pairs remain after subnet filtering.")
+        warn(
+            "No Cloudflare-matching pairs",
+            "Every resolved SNI/IP landed outside the Cloudflare subnet ranges. "
+            "Update config/sni-list.txt or config/cf_subnets.txt and try again.",
+        )
         pause_terminal(pause_on_exit, "Press Enter to close...")
         return 1
 
@@ -701,8 +794,8 @@ def run_scan(settings: ScanSettings, pause_on_exit: bool = True) -> int:
         UI_CONSOLE.print(table)
 
     if summary.get("runtime_error"):
-        UI_CONSOLE.print(f"[red]Runtime error:[/] {summary['runtime_error']}")
-        UI_CONSOLE.print(f"[yellow]See log:[/] {SCANNER_LOG_PATH}")
+        error("Runtime error", str(summary["runtime_error"]))
+        UI_CONSOLE.print(f"  [dim]Log:[/] {SCANNER_LOG_PATH}")
         pause_terminal(pause_on_exit, "Press Enter to close...")
         return 1
 

@@ -111,6 +111,8 @@ class VlessProfile:
     flow: str = ""
     fp: str = "chrome"
     alpn: str = ""
+    protocol: str = "vless"
+    password: str = ""
 
 
 @dataclass
@@ -125,6 +127,7 @@ class ScanSettings:
     probe_read_timeout_seconds: float = 15.0
     retries_per_pair: int = 1
     vless_source: str = ""
+    tls_insecure_compat: bool = False
 
     def __post_init__(self) -> None:
         self.workers = max(1, int(self.workers))
