@@ -1,220 +1,99 @@
-# SNI-Finder Scanner
+# 🚀 اسکنر SNI-Finder
 
-SNI-Finder جفت‌های SNI+IP را با زنجیره‌ای سه‌مرحله‌ای اسکن می‌کند:
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/NaxonM/SNI-Finder?color=orange)](https://github.com/NaxonM/SNI-Finder/releases)
 
-1. **SNISPF core** — در حالت سخت‌گیرانه `wrong_seq` برای هر جفت اجرا می‌شود.
-2. **Xray core** — با یک outbound از نوع VLESS/Trojan که به نمونه SNISPF محلی متصل است راه‌اندازی می‌شود.
-3. **HTTP probe** — یک درخواست HTTP از طریق رابط SOCKS در Xray ارسال می‌کند تا سالم بودن هر جفت را تأیید کند.
+اسکنر تخصصی و فوق‌سریع SNI-Finder برای شناسایی دامنه های سالم پشت کلودفلر (Server Name Indication) طراحی شده است که در برابر فیلترینگ و پروتکل‌های شناسایی بسته (DPI) مقاومت می‌کنند. این ابزار با زنجیر کردن سه ابزار کلیدی، پایداری دامنه‌ها را با دقت میلی‌ثانیه می‌سنجد:
 
-> راهنمای انگلیسی: [README.md](README.md)
+### 🔗 معماری زنجیره‌ای سه‌گانه
+۱. **هسته SNISPF** — ترافیک بسته‌ها را رهگیری کرده و تکنیک‌های دور زدن DPI از نوع `wrong_seq` را برای هر جفت اعمال می‌کند.
+۲. **هسته Xray** — کلاینت عبور از فیلترینگ که با کانکشن VLESS/Trojan شما پیکربندی شده و به صورت محلی به پروسه SNISPF متصل می‌شود.
+۳. **تست HTTP** — یک درخواست واقعی SOCKS5h از طریق Xray ارسال کرده و دسترسی واقعی به اینترنت و پینگ (Latency) جفت‌ها را ثبت می‌کند.
+
+> 🇬🇧 ** English Guide:** [README.md](README.md)
 
 ---
 
-## شروع سریع (نسخه‌های Release)
+## ⚡ شروع سریع (نسخه‌های آماده Release)
 
-روش پیشنهادی استفاده از بسته‌های آماده Release است.
+ساده‌ترین روش، استفاده از بسته‌های آماده و کامپایل‌شده پروژه است که شامل پروسه‌های جانبی Xray و SNISPF نیز می‌شوند.
 
-**۱. دانلود بسته مناسب سیستم‌عامل** از GitHub Releases:
+### ۱. دانلود و استخراج بسته‌ها
+بسته مناسب سیستم‌عامل خود را از بخش **[GitHub Releases](https://github.com/NaxonM/SNI-Finder/releases)** دانلود کنید:
+* **ویندوز**: `sni-finder_windows_amd64_bundle.zip`
+* **لینوکس**: `sni-finder_linux_amd64_bundle.tar.gz`
 
-| سیستم‌عامل | فایل |
-|------------|------|
-| ویندوز | `sni-finder_windows_amd64_bundle.zip` |
-| لینوکس | `sni-finder_linux_amd64_bundle.tar.gz` |
+آرشیو را استخراج کرده و ترمینال را در پوشه مربوطه باز کنید.
 
-**۲. استخراج آرشیو** و باز کردن ترمینال در پوشه استخراج‌شده.
+### ۲. تنظیم دامنه‌ها
+لیست دامنه‌ها را در `config/sni-list.txt` (یک دامنه در هر خط) وارد کنید. پیشنهاد می‌کنیم **[راهنمای جامع پیدا کردن SNIهای معتبر کلودفلر](docs/sourcing_snis.md)** را مطالعه کنید (شامل فیلترکننده خودکار Tranco).
 
-**۳. ویرایش `config/sni-list.txt`** — در هر خط یک SNI قرار دهید.
+### ۳. اجرای اسکنر
 
-**۴. اجرای اسکنر:**
-
-*ویندوز (حتماً با Administrator):*
+#### 🪟 ویندوز
+فایل `start.bat` را اجرا کنید یا در ترمینال بنویسید:
 ```powershell
-cd sni-finder_windows_amd64_bundle
 .\start.bat
 ```
+* **دسترسی ادمین خودکار**: اسکریپت `start.bat` به طور خودکار درخواست **دسترسی Administrator** (از طریق UAC) می‌دهد. این دسترسی برای WinDivert و تزریق بسته‌های خام شبکه (`wrong_seq`) الزامی است.
+* **نصب خودکار**: پیش‌نیازهای پایتونی از فایل `requirements.txt` به صورت خودکار روی سیستم نصب می‌شوند.
 
-*لینوکس (با دسترسی لازم):*
+#### 🐧 لینوکس
+دستورات زیر را در ترمینال وارد کنید:
 ```bash
-cd sni-finder_linux_amd64_bundle
 chmod +x ./start.sh
 sudo ./start.sh
 ```
+* **سطح دسترسی**: برای کار با پکت‌های شبکه خام لینوکس نیاز به `sudo` (دسترسی root یا قابلیت `CAP_NET_RAW`) است.
+* **ایزوله‌سازی مخزن**: اسکریپت `start.sh` یک **محیط مجازی پایتون (`venv`)** به صورت محلی در پوشه اسکنر ساخته و فعال می‌کند تا پیش‌نیازها بدون تداخل با پایتون اصلی سیستم‌عامل نصب و اجرا شوند.
 
-**۵. راه‌اندازی اولیه:**
-- لانچر وابستگی‌های Python را بررسی کرده و موارد ناقص را نصب می‌کند.
-- اگر `vless_source` پیکربندی نشده باشد، تنظیم تعاملی به صورت خودکار شروع می‌شود.
-
-**۶. شروع اسکن:**
-- از منو گزینه **Start scan** را انتخاب کنید، یا
-- مستقیم اجرا کنید: `python3 scanner.py run`
-
-**۷. مشاهده نتایج:**
-- `results/latest.json`
-- `results/<timestamp>/working_pairs.txt`
-- `logs/scanner.log`
+### ۴. پیکربندی و شروع
+- **اجرای اول**: لانچر از شما می‌خواهد لینک کانکشن خود (`vless://` یا `trojan://`) را پیست کنید.
+- **منوی اصلی**: کلید `1` (یا **Enter**) را بزنید تا اسکن آغاز شود. در هر زمان با فشردن `Ctrl+C` اسکن را متوقف کنید.
 
 ---
 
-## اسکرین‌شات‌ها
+## 📊 داشبورد زنده و تصاویر ابزار
 
-![صفحه نتایج](resources/SNI-Finder-01.png)
-![اجرای اسکن](resources/SNI-Finder-02.png)
-![منوی اصلی](resources/SNI-Finder-03.png)
+این ابزار با استفاده از کتابخانه `rich` محیط ترمینال بدون لرزش و جذابی را ارائه می‌دهد.
 
----
-
-## قابلیت‌ها
-
-- خواندن لیست SNI از `config/sni-list.txt` و Resolve کردن به IPv4.
-- فیلتر کردن جفت‌ها به ساب‌نت‌های Cloudflare پیش از شروع اسکن.
-- اسکن موازی با worker‌های مستقل و پورت‌های ایزوله.
-- پشتیبانی از VLESS/Trojan با ترنسپورت‌های ws/grpc/httpupgrade/xhttp.
-- نمایش داشبورد زنده Rich به همراه گزارش علت خطاها.
-- ذخیره کامل خروجی‌های هر اجرا: خلاصه، لیست جفت‌های سالم/ناسالم، و لاگ.
+| منوی اصلی | اجرای اسکن |
+| :---: | :---: |
+| ![منوی اصلی](resources/SNI-Finder-03.png) | ![داشبورد اسکن](resources/SNI-Finder-02.png) |
 
 ---
 
-## پیش‌نیازها
+## 🌟 قابلیت‌های برجسته
 
-- **Python 3.10** یا بالاتر
-- یک **VLESS/Trojan** معتبر
-- باینری‌های **SNISPF** و **Xray**
-
-**ویندوز:**
-- PowerShell را به صورت Administrator اجرا کنید (لازمه `wrong_seq` و WinDivert).
-- فایل‌های زیر را در `bin/` قرار دهید:
-  - `snispf_windows_amd64.exe`
-  - `xray.exe`
-  - `WinDivert.dll`
-  - `WinDivert64.sys`
-
-**لینوکس:**
-- دسترسی raw packet داشته باشید (root یا `CAP_NET_RAW`).
-- فایل‌های زیر را در `bin/` قرار دهید:
-  - `snispf_linux_amd64` (یا نسخه arm64)
-  - `xray`
-
-**متغیرهای اختیاری** برای تعریف مسیر باینری‌ها (مسیر کامل، مسیر نسبی پروژه، یا نام دستور در `PATH`):
-
-| متغیر | کاربرد |
-|-------|--------|
-| `SNI_FINDER_SNISPF_BIN` | تعریف مسیر باینری SNISPF |
-| `SNI_FINDER_XRAY_BIN`   | تعریف مسیر باینری Xray   |
+* **فیلترینگ ساب‌نت**: تطبیق خودکار آی‌پی‌های Resolve شده با رنج‌های رسمی کلودفلر (`config/cf_subnets.txt`) پیش از آغاز اسکن.
+* **اسکن موازی**: به کارگیری چندین Worker به صورت همزمان با تخصیص پورت‌های ایزوله (`24000+` برای SNISPF و `25000+` برای Xray) برای اسکن ده‌ها جفت در ثانیه.
+* **ایمنی کامل پروسه‌ها**: بستن فوق‌العاده دقیق پروسه‌های یتیم اسکنر بر اساس PID جهت **جلوگیری از تداخل یا بسته شدن کانکشن کلاینت‌های خارجی** (مانند **v2rayN**).
+* **داشبورد زنده خطاها**: دسته‌بندی و نمایش همزمان خطاهای رخ داده در حین اسکن (مانند `port_conflict` یا `read_timeout`).
 
 ---
 
-## نصب
+## 📂 ساختار فایل‌های پروژه
 
-**ویندوز:**
-```powershell
-cd SNI-Finder
-pip install -r requirements.txt
 ```
-
-**لینوکس:**
-```bash
-cd SNI-Finder
-python3 -m pip install -r requirements.txt
+SNI-Finder/
+├── config/
+│   ├── cf_subnets.txt        # دیتابیس رنج‌های آی‌پی کلودفلر
+│   ├── sni-list.txt          # لیست دامنه‌های هدف برای اسکن
+│   └── scanner_settings.json # فایل تنظیمات ذخیره شده
+├── docs/
+│   └── sourcing_snis.md      # راهنمای جامع پیدا کردن SNIهای معتبر
+├── scripts/
+│   ├── extract_cf_from_tranco.py # استخراج‌کننده خودکار دامنه‌های کلودفلر
+│   └── build_release_bundles.py  # اسکریپت بیلد فایل‌های زیپ انتشار
+├── logs/
+│   └── scanner.log           # فایل لاگ اصلی اسکنر
+├── results/
+│   └── latest.json           # شورتکات به خروجی آخرین اسکن
+└── LICENSE                   # لایسنس پروژه (GNU GPL v3)
 ```
 
 ---
 
-## پیکربندی
+## 🛡️ لایسنس
 
-`vless_source` را با یکی از روش‌های زیر تنظیم کنید:
-
-- لینک کامل `vless://...`
-- لینک کامل `trojan://...`
-- مسیر یک فایل txt حاوی `vless://...`
-- مسیر یک فایل JSON از Xray با outbound نوع VLESS یا Trojan
-
-**تنظیم تعاملی:**
-```bash
-python3 scanner.py configure
-```
-
-فایل تنظیمات: `config/scanner_settings.json`
-
-**تنظیمات پیشرفته:**
-- `tls_insecure_compat` (پیش‌فرض `false`) — در صورت فعال بودن، TLS برای مقصدهایی با گواهی نامعتبر حذف می‌شود.
-
----
-
-## اجرا
-
-| روش | دستور |
-|-----|-------|
-| اسکریپت لانچ (ویندوز) | `start.bat` |
-| اسکریپت لانچ (لینوکس) | `sudo ./start.sh` |
-| حالت منو | `python3 scanner.py` |
-| اسکن مستقیم | `python3 scanner.py run` |
-| فقط Resolve | `python3 scanner.py resolve` |
-| اجرا با VLESS موقت | `python3 scanner.py run --vless "vless://..."` |
-
-**توقف نرم:** در حین اسکن `Ctrl+C` بزنید. Worker‌های فعال پروسه‌ها را پاکسازی کرده و به منو برمی‌گردند.
-
----
-
-## ساخت بسته انتشار
-
-اسکریپت انتشار به صورت خودکار آخرین نسخه پایدار این ابزارها را دریافت می‌کند:
-- **SNISPF** از `NaxonM/snispf-core`
-- **Xray** از `XTLS/Xray-core`
-
-**ویندوز:**
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\build_release_bundles.ps1
-```
-
-**لینوکس:**
-```bash
-bash ./scripts/build_release_bundles.sh
-```
-
-**فایل‌های خروجی:**
-
-| فایل | توضیح |
-|------|-------|
-| `release/sni-finder_windows_amd64_bundle.zip` | بسته ویندوز |
-| `release/sni-finder_linux_amd64_bundle.tar.gz` | بسته لینوکس |
-| `release/checksums.txt` | چک‌سام فایل‌ها |
-| `release/release_manifest.json` | مانیفست انتشار |
-
----
-
-## انتشار با GitHub Actions (پیشنهادی)
-
-انتشار نهایی را با workflow انجام دهید و فایل‌های generated را مستقیماً commit نکنید.
-
-**فایل workflow:** `.github/workflows/release.yml`
-
-| تریگر | رفتار |
-|-------|-------|
-| `workflow_dispatch` | ساخت بسته برای تست یا بررسی |
-| Push تگ با الگوی `v*` | ساخت بسته و انتشار خودکار روی GitHub Releases |
-
-**نمونه انتشار با تگ:**
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
----
-
-## خروجی‌های اجرا
-
-| مسیر | توضیح |
-|------|-------|
-| `results/latest.json` | نتایج آخرین اجرا |
-| `results/<timestamp>/summary.json` | خلاصه اجرا |
-| `results/<timestamp>/working_pairs.json` | جفت‌های سالم (JSON) |
-| `results/<timestamp>/failed_pairs.json` | جفت‌های ناسالم (JSON) |
-| `results/<timestamp>/working_pairs.txt` | جفت‌های سالم (متن ساده) |
-| `logs/scanner.log` | لاگ کامل اسکنر |
-
----
-
-## نکته‌ها
-
-- فایل `config/cf_subnets.txt` اجباری است و باید پیش از اجرا وجود داشته باشد.
-- جفت‌هایی که خارج از ساب‌نت‌های شناخته‌شده Cloudflare هستند، پیش از شروع اسکن حذف می‌شوند.
+این پروژه تحت لایسنس **GNU General Public License v3.0** منتشر شده است - جزئیات بیشتر در فایل [LICENSE](LICENSE).

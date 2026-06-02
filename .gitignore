@@ -28,5 +28,5 @@ bin/
 .DS_Store
 Thumbs.db
 
-# Removed legacy docs tree from repository
-docs/
+# Large local data files
+*.csv

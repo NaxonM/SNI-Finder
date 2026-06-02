@@ -1,220 +1,99 @@
-# SNI-Finder Scanner
+# 🚀 SNI-Finder Scanner
 
-SNI-Finder scans SNI+IP candidate pairs by chaining three stages:
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/NaxonM/SNI-Finder?color=orange)](https://github.com/NaxonM/SNI-Finder/releases)
 
-1. **SNISPF core** — runs in strict `wrong_seq` mode for each candidate pair.
-2. **Xray core** — launches with a VLESS/Trojan outbound pointed at the local SNISPF instance.
-3. **HTTP probe** — sends a request over Xray's SOCKS interface to mark each pair as working or failed.
+An elite, high-performance SNI+IP scanner designed to discover DPI-resilient Server Name Indication (SNI) hostnames that survive SNI-based deep packet inspection. By combining a triple-chained architecture, the scanner verifies the accessibility of Cloudflare-fronted domains with millisecond precision.
 
-> Persian guide: [README_fa.md](README_fa.md)
+### 🔗 Triple-Chained Architecture
+1. **SNISPF Core** — Intercepts packets and executes strict `wrong_seq` DPI bypass techniques for each target pair.
+2. **Xray Core** — Standard anti-censorship client configured with VLESS/Trojan outbounds directed at the local SNISPF instance.
+3. **HTTP Probe** — Dispatches real-world SOCKS5h requests over Xray's interface to verify actual internet access and records latency.
+
+> 🇮🇷 ** Persian/Farsi Guide:** [README_fa.md](README_fa.md)
 
 ---
 
-## Quick Start (GitHub Releases)
+## ⚡ Quick Start (GitHub Releases)
 
-The recommended way to get started is to use a pre-built release bundle.
+The recommended way to start is using our pre-built release bundles which come pre-configured with Xray and SNISPF runtimes.
 
-**1. Download the bundle for your platform** from GitHub Releases:
+### 1. Download & Extract
+Download the bundle for your platform from [GitHub Releases](https://github.com/NaxonM/SNI-Finder/releases):
+* **Windows**: `sni-finder_windows_amd64_bundle.zip`
+* **Linux**: `sni-finder_linux_amd64_bundle.tar.gz`
 
-| Platform | Asset |
-|----------|-------|
-| Windows  | `sni-finder_windows_amd64_bundle.zip` |
-| Linux    | `sni-finder_linux_amd64_bundle.tar.gz` |
+Extract the folder and open a terminal inside it.
 
-**2. Extract the archive** and open a terminal inside the extracted folder.
+### 2. Configure Sourcing
+Add one SNI domain per line to `config/sni-list.txt` or read our **[Guide on Sourcing Cloudflare SNIs](docs/sourcing_snis.md)** to find elite, high-resilience domains (including our automated Tranco Top Sites processor).
 
-**3. Edit `config/sni-list.txt`** — add one SNI per line.
+### 3. Launch the Scanner
 
-**4. Launch the scanner:**
-
-*Windows (run as Administrator):*
+#### 🪟 Windows
+Double-click `start.bat` or run it from terminal:
 ```powershell
-cd sni-finder_windows_amd64_bundle
 .\start.bat
 ```
+* **Self-Elevation**: `start.bat` automatically requests **Administrator privileges** via UAC. This is strictly required on Windows to perform raw WinDivert packet injection (`wrong_seq` fragmentation).
+* **Automatic Setup**: Installs required packages from `requirements.txt` into your workspace.
 
-*Linux (requires elevated privileges):*
+#### 🐧 Linux
+Mark the script as executable and run it:
 ```bash
-cd sni-finder_linux_amd64_bundle
 chmod +x ./start.sh
 sudo ./start.sh
 ```
+* **Privileges**: Requires `sudo` (root or `CAP_NET_RAW` capabilities) to handle raw socket operations.
+* **Workspace Sandbox**: `start.sh` automatically checks for, creates, and activates a Python **virtual environment (`venv`)** locally to sandbox dependencies before launching the scanner.
 
-**5. First-run setup:**
-- The launcher checks for required Python packages and installs any that are missing.
-- If `vless_source` is not configured, an interactive setup wizard starts automatically.
-
-**6. Start scanning:**
-- From the menu, select **Start scan**, or
-- Run directly: `python scanner.py run`
-
-**7. Review results:**
-- `results/latest.json`
-- `results/<timestamp>/working_pairs.txt`
-- `logs/scanner.log`
+### 4. Setup & Scan
+- **First Run**: An interactive configuration wizard will prompt you to paste your `vless://` or `trojan://` proxy URI.
+- **MainMenu**: Press `1` (or hit **Enter**) to run the scan. Press `Ctrl+C` at any time to gracefully stop.
 
 ---
 
-## Screenshots
+## 📊 Live Dashboard & Screenshots
 
-![Results view](resources/SNI-Finder-01.png)
-![Scan view](resources/SNI-Finder-02.png)
-![Main menu](resources/SNI-Finder-03.png)
+SNI-Finder features an interactive, flicker-free terminal interface powered by `rich`.
 
----
-
-## Features
-
-- Resolves the SNI list to IPv4 pairs.
-- Filters pairs to Cloudflare subnets before scanning begins.
-- Runs parallel workers with isolated SNISPF/Xray port assignments.
-- Supports VLESS/Trojan with ws/grpc/httpupgrade/xhttp transports.
-- Displays a live Rich dashboard with failure-reason breakdowns.
-- Saves full run artifacts: summary, working/failed lists, and logs.
+| Main Menu | Active Scan |
+| :---: | :---: |
+| ![Main Menu](resources/SNI-Finder-03.png) | ![Scan View](resources/SNI-Finder-02.png) |
 
 ---
 
-## Prerequisites
+## 🌟 Key Features
 
-- **Python 3.10+**
-- A valid **VLESS/Trojan source**
-- **SNISPF** and **Xray** binaries
-
-**Windows:**
-- Run an elevated PowerShell session (required for strict `wrong_seq` and WinDivert).
-- Place the following files in `bin/`:
-  - `snispf_windows_amd64.exe`
-  - `xray.exe`
-  - `WinDivert.dll`
-  - `WinDivert64.sys`
-
-**Linux:**
-- Run with raw-packet privileges (root or `CAP_NET_RAW`).
-- Place the following files in `bin/`:
-  - `snispf_linux_amd64` (or `arm64` variant)
-  - `xray`
-
-**Optional binary overrides** (accept absolute path, project-relative path, or a command in `PATH`):
-
-| Variable | Purpose |
-|----------|---------|
-| `SNI_FINDER_SNISPF_BIN` | Override SNISPF binary path |
-| `SNI_FINDER_XRAY_BIN`   | Override Xray binary path   |
+* **Subnet Filtering**: Instantly filters resolved IPs against the Cloudflare subnets list (`config/cf_subnets.txt`) before scanning.
+* **Parallel Performance**: Parallel multi-threaded workers with isolated port mappings (`24000+` for SNISPF, `25000+` for Xray) to scan hundreds of domains in seconds.
+* **Safety First**: Features high-precision PID-based termination of background worker processes, ensuring it **never** kills external VPN/Xray clients like **v2rayN**.
+* **Failure Analysis**: Real-time error categorization (e.g., `port_conflict`, `read_timeout`, `tls_error`) shown on a live status dashboard.
 
 ---
 
-## Installation
+## 📂 Project Structure
 
-**Windows:**
-```powershell
-cd SNI-Finder
-pip install -r requirements.txt
 ```
-
-**Linux:**
-```bash
-cd SNI-Finder
-python3 -m pip install -r requirements.txt
+SNI-Finder/
+├── config/
+│   ├── cf_subnets.txt        # Cloudflare subnet database
+│   ├── sni-list.txt          # Target list of SNI domains
+│   └── scanner_settings.json # Saved scan parameters
+├── docs/
+│   └── sourcing_snis.md      # Detailed guide for finding SNIs
+├── scripts/
+│   ├── extract_cf_from_tranco.py # Automatic Tranco CSV filter
+│   └── build_release_bundles.py # Bundle generation script
+├── logs/
+│   └── scanner.log           # Master scan logs
+├── results/
+│   └── latest.json           # Symlink to latest run artifacts
+└── LICENSE                   # GNU GPL v3 License
 ```
 
 ---
 
-## Configuration
+## 🛡️ License
 
-Set `vless_source` using one of the following formats:
-
-- A full `vless://...` URI
-- A full `trojan://...` URI
-- Path to a text file containing a `vless://...` URI
-- Path to an Xray JSON config file with a VLESS or Trojan outbound
-
-**Interactive configuration:**
-```powershell
-python scanner.py configure
-```
-
-Settings are stored in: `config/scanner_settings.json`
-
-**Advanced settings:**
-- `tls_insecure_compat` (default `false`) — when enabled, skips TLS for endpoints with broken or mismatched certs.
-
----
-
-## Usage
-
-| Method | Command |
-|--------|---------|
-| Launch script (Windows) | `start.bat` |
-| Launch script (Linux) | `sudo ./start.sh` |
-| Interactive menu | `python scanner.py` |
-| Direct scan | `python scanner.py run` |
-| Resolve-only | `python scanner.py resolve` |
-| Override VLESS for one run | `python scanner.py run --vless "vless://..."` |
-
-**Graceful stop:** Press `Ctrl+C` during a scan. Active workers will clean up their processes and return you to the menu.
-
----
-
-## Building Release Bundles
-
-The bundle builder automatically fetches the latest stable releases of:
-- **SNISPF** from `NaxonM/snispf-core`
-- **Xray** from `XTLS/Xray-core`
-
-**Windows:**
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\build_release_bundles.ps1
-```
-
-**Linux:**
-```bash
-bash ./scripts/build_release_bundles.sh
-```
-
-**Output files:**
-
-| File | Description |
-|------|-------------|
-| `release/sni-finder_windows_amd64_bundle.zip` | Windows bundle |
-| `release/sni-finder_linux_amd64_bundle.tar.gz` | Linux bundle |
-| `release/checksums.txt` | File checksums |
-| `release/release_manifest.json` | Release manifest |
-
----
-
-## GitHub Actions Release (Recommended)
-
-Use the included workflow to publish releases — do not commit generated bundle files directly.
-
-**Workflow file:** `.github/workflows/release.yml`
-
-| Trigger | Behavior |
-|---------|----------|
-| `workflow_dispatch` | Builds bundles for validation or testing |
-| Tag push matching `v*` | Builds bundles and publishes them as GitHub Release assets |
-
-**Example tag release:**
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
----
-
-## Runtime Outputs
-
-| Path | Description |
-|------|-------------|
-| `results/latest.json` | Latest run results (symlink/copy) |
-| `results/<timestamp>/summary.json` | Run summary |
-| `results/<timestamp>/working_pairs.json` | Working pairs (JSON) |
-| `results/<timestamp>/failed_pairs.json` | Failed pairs (JSON) |
-| `results/<timestamp>/working_pairs.txt` | Working pairs (plain text) |
-| `logs/scanner.log` | Full scanner log |
-
----
-
-## Notes
-
-- `config/cf_subnets.txt` is required and must be present before scanning.
-- Pairs that fall outside known Cloudflare subnets are dropped before the scan begins.
+This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
