@@ -594,10 +594,10 @@ class ScanController:
         for t in threads:
             t.start()
         for t in threads:
-            t.join(timeout=5)
+            t.join()
 
         with self.lock:
-            if self.state != "stopping":
+            if self.state != "stopping" and self.processed >= len(self.pairs):
                 self.state = "completed"
         progress_thread.join(timeout=2)
 
