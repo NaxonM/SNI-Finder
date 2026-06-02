@@ -687,8 +687,28 @@ def _build_plan(pairs: list[dict[str, str]]) -> dict[str, int]:
     return per_sni_counts
 
 
+def kill_existing_processes() -> None:
+    """Kill any existing snispf and xray processes from previous runs."""
+    logging.info("Cleaning up any orphaned snispf/xray processes before scan starts")
+    if os.name == "nt":
+        for name in ["snispf_windows_amd64.exe", "snispf.exe", "xray.exe"]:
+            subprocess.run(
+                ["taskkill", "/F", "/IM", name],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+    else:
+        for name in ["snispf", "xray"]:
+            subprocess.run(
+                ["killall", "-9", name],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+
 def run_scan(settings: ScanSettings, pause_on_exit: bool = True) -> int:
     GLOBAL_STOP.clear()
+    kill_existing_processes()
     phase("Step 1/6", "Validating scanner prerequisites")
     if os.name == "nt" and not is_elevated_windows():
         error(
