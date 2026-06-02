@@ -17,6 +17,9 @@ All notable changes to SNI-Finder are documented in this file.
 
 ### Fixed
 - Ctrl+C during scans returns to the menu instead of exiting the app.
+- False positive scan results by introducing pre-flight port conflict detection and live subprocess crash/exit monitoring.
+- Worker thread join timing in ScanController to avoid hung/zombie termination states.
+- Cleaned up and alphabetized the default domain configuration list.
 
 ## [v0.1.5] - 2026-05-29
 
