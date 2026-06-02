@@ -71,10 +71,19 @@ def is_port_open(host: str, port: int, timeout: float = 0.2) -> bool:
         return False
 
 
-def wait_port(host: str, port: int, timeout: float, stop_event: Optional[threading.Event] = None) -> bool:
+def wait_port(
+    host: str,
+    port: int,
+    timeout: float,
+    stop_event: Optional[threading.Event] = None,
+    proc: Optional[subprocess.Popen] = None,
+) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
         if stop_event is not None and stop_event.is_set():
+            return False
+        if proc is not None and proc.poll() is not None:
+            # Subprocess has already exited/crashed!
             return False
         if is_port_open(host, port):
             return True
@@ -340,6 +349,10 @@ def run_pair(
             result["reason"] = "stopped"
             return result
 
+        if is_port_open(SNISPF_BIND_HOST, snispf_port) or is_port_open(XRAY_SOCKS_HOST, socks_port):
+            result["reason"] = "port_conflict"
+            return result
+
         with open(snispf_log_path, "a", encoding="utf-8") as snispf_log, open(xray_log_path, "a", encoding="utf-8") as xray_log:
             snispf_proc = subprocess.Popen(
                 [str(resolve_tool_path(str(SNISPF_BIN))), "--config", str(snispf_cfg_path)],
@@ -347,7 +360,7 @@ def run_pair(
                 stderr=snispf_log,
                 creationflags=creationflags,
             )
-            if not wait_port(SNISPF_BIND_HOST, snispf_port, settings.snispf_ready_timeout_seconds, stop_event):
+            if not wait_port(SNISPF_BIND_HOST, snispf_port, settings.snispf_ready_timeout_seconds, stop_event, snispf_proc):
                 result["reason"] = "snispf_not_ready"
                 result["snispf_pid"] = snispf_proc.pid if snispf_proc else None
                 result["snispf_log_tail"] = tail_text(snispf_log_path)
@@ -359,7 +372,7 @@ def run_pair(
                 stderr=xray_log,
                 creationflags=creationflags,
             )
-            if not wait_port(XRAY_SOCKS_HOST, socks_port, settings.xray_ready_timeout_seconds, stop_event):
+            if not wait_port(XRAY_SOCKS_HOST, socks_port, settings.xray_ready_timeout_seconds, stop_event, xray_proc):
                 result["reason"] = "xray_not_ready"
                 result["snispf_pid"] = snispf_proc.pid if snispf_proc else None
                 result["xray_pid"] = xray_proc.pid if xray_proc else None
