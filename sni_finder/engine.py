@@ -687,28 +687,50 @@ def _build_plan(pairs: list[dict[str, str]]) -> dict[str, int]:
     return per_sni_counts
 
 
-def kill_existing_processes() -> None:
-    """Kill any existing snispf and xray processes from previous runs."""
-    logging.info("Cleaning up any orphaned snispf/xray processes before scan starts")
+def kill_process_on_port(host: str, port: int) -> None:
+    """Find and kill the process listening on a specific port, if any."""
     if os.name == "nt":
-        for name in ["snispf_windows_amd64.exe", "snispf.exe", "xray.exe"]:
-            subprocess.run(
-                ["taskkill", "/F", "/IM", name],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+        try:
+            out = subprocess.check_output(["netstat", "-ano"], text=True, errors="ignore")
+            for line in out.splitlines():
+                if f":{port}" in line and "LISTENING" in line:
+                    parts = line.strip().split()
+                    if len(parts) >= 5:
+                        pid = parts[-1]
+                        if pid.isdigit() and int(pid) > 0:
+                            logging.info(f"Port {port} is occupied. Killing process PID {pid}")
+                            subprocess.run(["taskkill", "/F", "/PID", pid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            logging.warning(f"Failed to find/kill process on port {port}: {e}")
     else:
-        for name in ["snispf", "xray"]:
-            subprocess.run(
-                ["killall", "-9", name],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+        try:
+            subprocess.run(["fuser", "-k", f"{port}/tcp"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
+
+def kill_existing_processes(workers: int) -> None:
+    """Kill orphaned snispf processes by name, and selectively free our exact worker ports."""
+    logging.info("Starting high-precision orphaned process cleanup")
+    
+    # 1. Kill snispf by name (completely unique to this tool, 100% safe)
+    if os.name == "nt":
+        for name in ["snispf_windows_amd64.exe", "snispf.exe"]:
+            subprocess.run(["taskkill", "/F", "/IM", name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        subprocess.run(["killall", "-9", "snispf"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+    # 2. Kill whatever is occupying our exact worker ports (SNISPF and Xray SOCKS)
+    for i in range(workers):
+        snispf_port = SNISPF_START_PORT + i
+        socks_port = XRAY_SOCKS_START_PORT + i
+        kill_process_on_port(SNISPF_BIND_HOST, snispf_port)
+        kill_process_on_port(XRAY_SOCKS_HOST, socks_port)
 
 
 def run_scan(settings: ScanSettings, pause_on_exit: bool = True) -> int:
     GLOBAL_STOP.clear()
-    kill_existing_processes()
+    kill_existing_processes(settings.workers)
     phase("Step 1/6", "Validating scanner prerequisites")
     if os.name == "nt" and not is_elevated_windows():
         error(
