@@ -607,7 +607,8 @@ class ScanController:
         for t in threads:
             t.start()
         for t in threads:
-            t.join()
+            while t.is_alive():
+                t.join(timeout=0.1)
 
         with self.lock:
             if self.state != "stopping" and self.processed >= len(self.pairs):
