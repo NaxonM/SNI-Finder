@@ -39,6 +39,7 @@ from sni_finder.ui import (
     UI_CONSOLE,
     WARN_COLOR,
     banner,
+    clear_screen,
     error,
     info,
     pause_terminal,
@@ -257,7 +258,7 @@ def _render_status_line(settings: ScanSettings) -> None:
 
 def _render_menu(last_status: str, settings: ScanSettings) -> None:
     """Print the menu, clearing the terminal view on redraw to keep it clean."""
-    UI_CONSOLE.clear()
+    clear_screen()
     section_rule("SNI-Finder")
     _render_status_line(settings)
     if last_status:
@@ -283,6 +284,7 @@ def _action_start_scan(settings: ScanSettings) -> tuple[ScanSettings, str]:
         if not getattr(settings, "vless_source", "").strip():
             return settings, f"[{FAIL_COLOR}]Setup cancelled. Proxy source is required.[/{FAIL_COLOR}]"
 
+    clear_screen()
     section_rule("Live Scan", style=ACCENT)
     shared.SCAN_ACTIVE = True
     try:
@@ -304,6 +306,7 @@ def _action_start_scan(settings: ScanSettings) -> tuple[ScanSettings, str]:
 
 
 def _action_view_results() -> str:
+    clear_screen()
     section_rule("Last Scan Results")
     data = _load_last_summary()
     if not data:
@@ -325,6 +328,7 @@ def _action_configure(settings: ScanSettings) -> tuple[ScanSettings, str]:
 
 
 def _action_resolve(settings: ScanSettings) -> str:
+    clear_screen()
     section_rule("Resolve SNI+IP Pairs", style=ACCENT)
     snis, resolved_pairs, pairs, dropped_pairs = resolve_with_progress(settings.max_ips_per_sni)
     per_sni_counts: dict[str, int] = {}

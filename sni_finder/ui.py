@@ -138,10 +138,12 @@ def pause_terminal(enabled: bool, message: str) -> None:
 
 
 def clear_screen() -> None:
-    """Reset cursor to home and clear from there. Avoids the full ANSI clear
-    used by Console.clear(), which causes visible flicker on Windows conhost.
-    Safe to call between major top-level transitions only."""
-    UI_CONSOLE.print("\x1b[H\x1b[J", end="")
+    """Bulletproof terminal clear. Uses native OS system clear to completely
+    reset the terminal screen and scrollback buffer, preventing overlapping text."""
+    if os.name == "nt":
+        os.system("cls")
+    else:
+        os.system("clear")
 
 
 # ----------------------------------------------------------------------------
