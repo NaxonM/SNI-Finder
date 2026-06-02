@@ -807,53 +807,63 @@ def run_scan(settings: ScanSettings, pause_on_exit: bool = True) -> int:
     controller = ScanController(settings, profile, pairs)
 
     try:
-        summary = controller.run()
-    except KeyboardInterrupt:
-        with controller.lock:
-            controller.state = "stopping"
-        GLOBAL_STOP.set()
-        summary = {
-            "timestamp": datetime.now().isoformat(),
-            "total_snis": len(per_sni_counts),
-            "successful_snis": len(controller.successful_snis),
-            "failed_snis": max(0, len(per_sni_counts) - len(controller.successful_snis)),
-            "total_pairs": len(pairs),
-            "working_pairs": len(controller.working),
-            "failed_pairs": len(controller.failed),
-            "workers": settings.workers,
-            "probe_url": settings.probe_url,
-            "state": "stopping",
-            "runtime_error": "interrupted",
-            "failure_reasons": dict(controller.reason_counts),
-        }
-    except Exception as exc:
-        logging.exception("scan runtime failed")
-        summary = {
-            "timestamp": datetime.now().isoformat(),
-            "total_snis": len(per_sni_counts),
-            "successful_snis": len(controller.successful_snis),
-            "failed_snis": max(0, len(per_sni_counts) - len(controller.successful_snis)),
-            "total_pairs": len(pairs),
-            "working_pairs": len(controller.working),
-            "failed_pairs": len(controller.failed),
-            "workers": settings.workers,
-            "probe_url": settings.probe_url,
-            "state": "error",
-            "runtime_error": str(exc),
-            "failure_reasons": dict(controller.reason_counts),
-        }
+        try:
+            summary = controller.run()
+        except KeyboardInterrupt:
+            with controller.lock:
+                controller.state = "stopping"
+            GLOBAL_STOP.set()
+            summary = {
+                "timestamp": datetime.now().isoformat(),
+                "total_snis": len(per_sni_counts),
+                "successful_snis": len(controller.successful_snis),
+                "failed_snis": max(0, len(per_sni_counts) - len(controller.successful_snis)),
+                "total_pairs": len(pairs),
+                "working_pairs": len(controller.working),
+                "failed_pairs": len(controller.failed),
+                "workers": settings.workers,
+                "probe_url": settings.probe_url,
+                "state": "stopping",
+                "runtime_error": "interrupted",
+                "failure_reasons": dict(controller.reason_counts),
+            }
+        except Exception as exc:
+            logging.exception("scan runtime failed")
+            summary = {
+                "timestamp": datetime.now().isoformat(),
+                "total_snis": len(per_sni_counts),
+                "successful_snis": len(controller.successful_snis),
+                "failed_snis": max(0, len(per_sni_counts) - len(controller.successful_snis)),
+                "total_pairs": len(pairs),
+                "working_pairs": len(controller.working),
+                "failed_pairs": len(controller.failed),
+                "workers": settings.workers,
+                "probe_url": settings.probe_url,
+                "state": "error",
+                "runtime_error": str(exc),
+                "failure_reasons": dict(controller.reason_counts),
+            }
 
-    phase("Step 6/6", "Saving results")
-    write_results(summary, controller.working, controller.failed)
+        phase("Step 6/6", "Saving results")
+        write_results(summary, controller.working, controller.failed)
 
-    for table in render_summary_tables(summary, str(RESULTS_DIR / "latest.json"), controller.working):
-        UI_CONSOLE.print(table)
+        for table in render_summary_tables(summary, str(RESULTS_DIR / "latest.json"), controller.working):
+            UI_CONSOLE.print(table)
 
-    if summary.get("runtime_error"):
-        error("Runtime error", str(summary["runtime_error"]))
-        UI_CONSOLE.print(f"  [dim]Log:[/] {SCANNER_LOG_PATH}")
-        pause_terminal(pause_on_exit, "Press Enter to close...")
-        return 1
+        if summary.get("runtime_error"):
+            error("Runtime error", str(summary["runtime_error"]))
+            UI_CONSOLE.print(f"  [dim]Log:[/] {SCANNER_LOG_PATH}")
+            pause_terminal(pause_on_exit, "Press Enter to close...")
+            return 1
 
-    pause_terminal(pause_on_exit, "Scan complete. Press Enter to close...")
-    return 0
+        pause_terminal(pause_on_exit, "Scan complete. Press Enter to close...")
+        return 0
+    finally:
+        # Clean up temporary configuration files inside RUNTIME_DIR
+        try:
+            import shutil
+            if RUNTIME_DIR.exists():
+                shutil.rmtree(RUNTIME_DIR)
+                RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logging.warning("Failed to clean up runtime temporary directory: %s", e)
