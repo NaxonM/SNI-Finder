@@ -49,7 +49,8 @@ call :ensure_requirements
 if errorlevel 1 (
 	echo.
 	echo Failed to install required Python packages from requirements.txt.
-	echo Please install dependencies manually and relaunch.
+	echo Please check your internet connection and ensure pip is installed.
+	echo You can also install manually by running: pip install -r requirements.txt
 	pause
 	exit /b 1
 )

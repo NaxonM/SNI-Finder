@@ -86,7 +86,8 @@ then
   if ! install_requirements "${PYTHON_BIN}"; then
     echo
     echo "Failed to install required packages automatically."
-    echo "Run manually inside the virtual environment: source .venv/bin/activate && pip install -r requirements.txt"
+    echo "Please ensure you have active internet access and 'pip' is installed."
+    echo "You can also install manually inside the virtual environment: source venv/bin/activate && pip install -r requirements.txt"
     read -r -p "Press Enter to close..."
     exit 1
   fi

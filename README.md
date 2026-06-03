@@ -36,7 +36,7 @@ Double-click `start.bat` or run it from terminal:
 .\start.bat
 ```
 * **Self-Elevation**: `start.bat` automatically requests **Administrator privileges** via UAC. This is strictly required on Windows to perform raw WinDivert packet injection (`wrong_seq` fragmentation).
-* **Automatic Setup**: Installs required packages from `requirements.txt` into your workspace.
+* **Automatic Setup & Fast Bypass**: Checks if the required libraries (`requests`, `socks`, `rich`) are already installed. If not, it automatically installs them from `requirements.txt`. On subsequent runs, it bypasses this check instantly (takes less than a second) for a zero-lag startup.
 
 #### 🐧 Linux
 Mark the script as executable and run it:
@@ -45,7 +45,7 @@ chmod +x ./start.sh
 sudo ./start.sh
 ```
 * **Privileges**: Requires `sudo` (root or `CAP_NET_RAW` capabilities) to handle raw socket operations.
-* **Workspace Sandbox**: `start.sh` automatically checks for, creates, and activates a Python **virtual environment (`venv`)** locally to sandbox dependencies before launching the scanner.
+* **Workspace Sandbox & Dependency Management**: `start.sh` checks for, creates, and activates a Python **virtual environment (`venv`)** locally to sandbox dependencies. It verifies and installs the required packages automatically on the first run, and instantly bypasses the check on subsequent runs.
 
 ### 4. Setup & Scan
 - **First Run**: An interactive configuration wizard will prompt you to paste your `vless://` or `trojan://` proxy URI.
